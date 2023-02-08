@@ -5,6 +5,9 @@ user=$(id -u -n)
 kshift_timer_loc="/home/$user/.config/systemd/user/kshift.timer"
 kshift_service_loc="/home/$user/.config/systemd/user/kshift.service"
 
+# tells to update timer
+update_timer=1
+
 ### User Vars ###
 
 if [ -f "/home/$user/.kshift" ]; then
@@ -26,6 +29,7 @@ else
     day_theme="BreezeLight"
 
     net_timeout=10
+
 fi
 
 tmpfile="/tmp/$location.out"
@@ -38,9 +42,6 @@ bool_timechange=0
 
 # day is 1, night is 2
 day_or_night_force=0
-
-# tells to update timer
-update_timer=1
 
 
 usage () {
@@ -175,7 +176,7 @@ web_sundata () {
 
     fi
 
-    if [ -f $kshift_timer_loc && $update_timer == 1 ]; then 
+    if [[ -f $kshift_timer_loc && $update_timer == 1 ]]; then 
         update_timer
     fi
 }
