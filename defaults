@@ -1,0 +1,20 @@
+# Location code from: https://weather.codes/search/
+location="USNY0996" # New York
+
+# Default sun rise/set times
+# Used if there is no internet
+sunrise="06:00"
+sunset="18:00"
+
+# Delay to theme change times
+# These numbers can be positive or negative
+# rise_delay=2 means that the theme will be changed to light_theme two hours after sunrise
+rise_delay=2
+set_delay=0
+
+# These themes can be any color theme, not just dark/light
+night_theme="BreezeDark"
+day_theme="BreezeLight"
+
+# How long kshift will wait for connection
+net_timeout=10
