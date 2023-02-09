@@ -32,8 +32,10 @@
         -dw / --daywallpaper   IMAGE      - wallpaper to be changed to during the day
 
         -t  / --timeout        SECONDS    - network timeout
+
+        -i  / --info                      - Prints status and info of kshift timer and variables
         -h  / --help                      - Prints this message
-        -i  / --install                   - creates a systemd timer and service for automatic kshift
+        --install                         - creates a systemd timer and service for automatic kshift
 
       The install command will use the current script variables to write a variable file to ~/.kshift.
       Using the other command options will influence the install.
@@ -86,5 +88,5 @@ https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-
 
 4. Now check to see if the system timers are on and working.
     ```
-    $ systemctl --user status kshift.timer
+    $ ./kshift --info
     ```

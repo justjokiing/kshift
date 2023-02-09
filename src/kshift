@@ -83,16 +83,21 @@ info () {
         timer_sunrise=$(cat $kshift_timer_loc | grep OnCalendar | awk '{print $2}' | sed s/:00// | head -1)
         timer_sunset=$(cat $kshift_timer_loc | grep OnCalendar | awk '{print $2}' | sed s/:00// | tail -1)
 
+        echo -e "##################################"
+
         if [[ $kshift_status == "enabled" ]]; then 
-            echo -e "Kshift enabled:"
+            echo -e "Kshift ENABLED:"
             echo -e "    Sunrise kshift at $timer_sunrise"
             echo -e "    Sunset kshift at $timer_sunset\n"
         else
-            echo -e "Kshift disabled.\n"
+            echo -e "Kshift DISABLED.\n"
         fi
 
-        echo -e "kshift local variables @ ~/.kshift\n"
+        echo -e "##################################"
+        echo -e "kshift local variables @ ~/.kshift"
+        echo -e "##################################\n"
         cat "/home/$user/.kshift"
+        echo -e "\n##################################"
     fi
 
 }
