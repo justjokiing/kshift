@@ -42,7 +42,9 @@
 ## Demo
 
 This demo is in the day, showing that the default usage will change it to the day theme.
-![](docs/kshiftdemo.mp4)
+
+https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-b392-2ba4726954e5.mp4
+
 
 ## Installation
 
