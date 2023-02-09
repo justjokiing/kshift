@@ -37,13 +37,19 @@
 
       The install command will use the current script variables to write a variable file to ~/.kshift.
       Using the other command options will influence the install.
-    
+
+
+## Demo
+
+This demo is in the day, showing that the default usage will change it to the day theme.
+![](docs/kshiftdemo.mp4)
+
 ## Installation
 
 1. Clone and enter kshift
     ```
     $ git clone https://github.com/justjokiing/kshift
-    $ cd kshift
+    $ cd kshift/src
     ```
 2. Edit the default variables in the variable file `defaults` or look at usage for command line arguments
 
@@ -69,7 +75,7 @@
     ```
     $ ./kshift --install [OPTIONS]
     ```
-    
+
     If you did not edit the `defaults` file, make sure to add command line arguments to change the default values during installation
 
     kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed.
