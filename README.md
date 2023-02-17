@@ -48,6 +48,14 @@ https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-
 
 ## Installation
 
+#### Required Programs
+* KDE Plasma
+* Netcat
+* Wget
+* Systemd
+
+#### Instructions
+
 1. Clone and enter kshift
     ```
     $ git clone https://github.com/justjokiing/kshift
