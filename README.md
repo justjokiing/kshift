@@ -5,6 +5,13 @@
  During installation, kshift sets systemd timers to run the script at sunrise and sunset.
  If installed and `update_timer` variable is not changed, the timer will update when sunset and sunrise times are updated from the internet.
 
+## Demo
+
+This demo is in the day, showing that the default usage will change it to the day theme.
+
+https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-b392-2ba4726954e5.mp4
+
+
 ## Usage
 
       Usage: kshift OPTIONS [ --install ] [ -h/--help ]
@@ -39,13 +46,6 @@
 
       The install command will use the current script variables to write a variable file to ~/.kshift.
       Using the other command options will influence the install.
-
-
-## Demo
-
-This demo is in the day, showing that the default usage will change it to the day theme.
-
-https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-b392-2ba4726954e5.mp4
 
 
 ## Installation
