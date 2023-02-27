@@ -5,8 +5,10 @@ user=$(id -u -n)
 kshift_timer_loc="/home/$user/.config/systemd/user/kshift.timer"
 kshift_service_loc="/home/$user/.config/systemd/user/kshift.service"
 
-# tells to update timer
-update_timer=1
+update_timer=0
+
+# 0 for no web
+webdata=1
 
 ### User Vars ###
 
@@ -69,10 +71,14 @@ usage () {
 
     echo -e "  -t  / --timeout        SECONDS    - network timeout\n"
 
+    echo -e "  -u  / --updatetimer               - Updates the systemd timer manually, if installed"
     echo -e "  -i  / --info                      - Prints status and info of kshift timer and variables"
-    echo -e "  -h  / --help                      - Prints this message"
-    echo -e "  --install                         - creates a systemd timer and service for automatic kshift\n"
-    echo -e "The intall command will use the current script variables to write a variable file to ~/.kshift.\nUsing the other command options will influence the install."
+    echo -e "  -h  / --help                      - Prints this message\n"
+
+    echo -e "  --install                         - creates a systemd timer and service for automatic kshift"
+    echo -e "  --remove                          - removes the systemd timer and service\n"
+
+    echo -e "The install command will use the current script variables to write a variable file to ~/.kshift.\nUsing the other command options will influence the install."
 }
 
 info () {
@@ -104,41 +110,17 @@ info () {
 
 
 
-while true; do
-    case "$1" in
-        -l | --location ) location="$2"; shift 2;;
 
-        -r | --sunrise ) sunrise="$2"; bool_timechange=1; shift 2;;
-        -s | --sunset ) sunset="$2"; bool_timechange=1; shift 2;;
-        -rd | --risedelay ) rise_delay="$2"; shift 2;;
-        -sd | --setdelay ) set_delay="$2"; shift 2;;
+# Outside of function scope for set_systemd and update_timer
 
-        -th | --theme ) theme="$2"; shift 2;;
-        -w  | --wallpaper ) wallpaper="$2"; shift 2;;
+kshift_timer="\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\nOnCalendar=*-*-* $sunrise:00\nOnCalendar=*-*-* $sunset:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
 
-        -n  | --night ) day_or_night_force=2; shift 1;; 
-        -nt | --nightheme ) night_theme="$2"; shift 2;;
-        -nw | --nightwallpaper ) night_wallpaper="$2"; shift 2;;
-
-        -d  | --day ) day_or_night_force=1; shift 1;;
-        -dt | --daytheme ) day_theme="$2"; shift 2;;
-        -dw | --daywallpaper ) day_wallpaper="$2"; shift 2;;
-
-        -t | --timeout ) net_timeout="$2"; shift 2;;
-
-        -i | --info ) info; exit;;
-        --install ) bool_install=1; shift 1;;
-        -h | --help ) usage; exit;;
-        * ) break ;;
-    esac
-done
-
-    kshift_timer="\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\nOnCalendar=*-*-* $sunrise:00\nOnCalendar=*-*-* $sunset:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
 
 ### Systemd Service and Timer ###
 set_systemd () {
 
     kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart=/home/$user/.local/bin/kshift"
+
 
     kshift_vars="location=\"$location\"\n\nsunrise=\"$sunrise\"\nsunset=\"$sunset\"\n\nrise_delay=$rise_delay\nset_delay=$set_delay\n\nnight_theme=\"$night_theme\"\nday_theme=\"$day_theme\"\n\nnet_timeout=$net_timeout\n\nday_wallpaper=$day_wallpaper\nnight_wallpaper=$night_wallpaper"
 
@@ -159,11 +141,40 @@ set_systemd () {
    systemctl --user start kshift.timer
 }
 
+remove_self () {
+
+    systemctl --user stop kshift.timer
+    systemctl --user disable kshift.timer
+
+    systemctl --user disable kshift.timer
+
+    rm $kshift_timer_loc
+    rm $kshift_service_loc
+
+    systemctl --user daemon-reload
+}
+
 update_timer () {
 
    echo -e $kshift_timer > $kshift_timer_loc
    systemctl --user daemon-reload
 
+}
+
+delay_time () {
+
+   IFS=":"
+
+   read -a rise_arr <<< "$sunrise"
+   read -a set_arr <<< "$sunset"
+
+   rise_arr[0]="$((${rise_arr[0]} + $rise_delay))"
+   set_arr[0]="$((${set_arr[0]} + $set_delay))"
+
+   IFS=""
+
+   sunrise=${rise_arr[0]}:${rise_arr[1]} 
+   sunset=${set_arr[0]}:${set_arr[1]}
 }
 
 web_sundata () {
@@ -190,26 +201,14 @@ web_sundata () {
         [ $bool_timechange == 0 ] && sunrise=$(date --date="$SUNR" +%R)
         [ $bool_timechange == 0 ] && sunset=$(date --date="$SUNS" +%R)
 
-        ### Time Delays ###
-
-        IFS=":"
-
-        read -a rise_arr <<< "$sunrise"
-        read -a set_arr <<< "$sunset"
-
-        rise_arr[0]="$((${rise_arr[0]} + $rise_delay))"
-        set_arr[0]="$((${set_arr[0]} + $set_delay))"
-
-        IFS=""
-
-        sunrise=${rise_arr[0]}:${rise_arr[1]} 
-        sunset=${set_arr[0]}:${set_arr[1]}
+        delay_time
 
     fi
 
-    if [[ -f $kshift_timer_loc && $update_timer == 1 ]]; then 
+    if [ -f $kshift_timer_loc ]; then
         update_timer
     fi
+
 }
 
 
@@ -250,6 +249,38 @@ kshift () {
 
 }
 
+while true; do
+    case "$1" in
+        -l | --location ) location="$2"; shift 2;;
+
+        -r | --sunrise ) sunrise="$2"; bool_timechange=1; shift 2;;
+        -s | --sunset ) sunset="$2"; bool_timechange=1; shift 2;;
+        -rd | --risedelay ) rise_delay="$2"; shift 2;;
+        -sd | --setdelay ) set_delay="$2"; shift 2;;
+
+        -th | --theme ) theme="$2"; shift 2;;
+        -w  | --wallpaper ) wallpaper="$2"; shift 2;;
+
+        -n  | --night ) day_or_night_force=2; shift 1;; 
+        -nt | --nightheme ) night_theme="$2"; shift 2;;
+        -nw | --nightwallpaper ) night_wallpaper="$2"; shift 2;;
+
+        -d  | --day ) day_or_night_force=1; shift 1;;
+        -dt | --daytheme ) day_theme="$2"; shift 2;;
+        -dw | --daywallpaper ) day_wallpaper="$2"; shift 2;;
+
+        -t | --timeout ) net_timeout="$2"; shift 2;;
+
+        -u | --updatetimer ) update_timer=1; shift 1;;
+        -i | --info ) info; exit;;
+
+        --remove ) remove_self; exit;;
+        --install ) bool_install=1; shift 1;;
+        -h | --help ) usage; exit;;
+        * ) break ;;
+    esac
+done
+
 ### Main ###
 
 if [ -f $kshift_timer_loc ]; then
@@ -260,11 +291,14 @@ if [ -f $kshift_timer_loc ]; then
     fi
 
     kshift
-    web_sundata
+    if [[ $webdata == 1 ]]; then 
+        web_sundata
+    fi
 
+    [ $update_timer == 1 ] && update_timer
 else
 
-    web_sundata
+    [ $webdata == 1 ] && web_sundata
     kshift
 
 fi
