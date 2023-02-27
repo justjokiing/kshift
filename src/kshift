@@ -222,7 +222,7 @@ kshift () {
 
     ### Day/Night Switching ###
 
-    exported_vars="export DISPLAY=:0 && export XDG_RUNTIME_DIR=/run/user/$(id -u) &&"
+    exported_vars="export XDG_RUNTIME_DIR=/run/user/$(id -u) &&"
 
     curr_theme=$(plasma-apply-colorscheme --list-schemes | grep current | awk '{print $2}')
 
