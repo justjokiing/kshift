@@ -93,7 +93,7 @@ https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-
 
     If you did not edit the `defaults` file, make sure to add command line arguments to change the default values during installation.
 
-    kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be updated when ran by the timer, unless the `$update_timer` variable is set to 0.
+    kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be set from the web by default, updating the timer each time. Setting the variable `webdata` to 0 will make the timer stop updating automatically. 
 
     kshift variables will then be located at `~/.kshift` and follows the same format of `defaults`, any further variable can be done by editing that file or using the `--install` option.
 
