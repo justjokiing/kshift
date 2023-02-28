@@ -238,14 +238,13 @@ kshift () {
 
     fi
 
+    ### Wallpaper Set ###
+
+    [ ! -z "$wallpaper" ] && eval "$exported_vars plasma-apply-wallpaperimage $wallpaper"
 
     ### Color Theme Set ###
 
     [[ $curr_theme != $theme ]] && eval "$exported_vars plasma-apply-colorscheme $theme"
-
-    ### Wallpaper Set ###
-
-    [ ! -z "$wallpaper" ] && eval "$exported_vars plasma-apply-wallpaperimage $wallpaper"
 
 }
 
