@@ -108,16 +108,10 @@ info () {
 
 }
 
-
-
-
-# Outside of function scope for set_systemd and update_timer
-
-kshift_timer="\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\nOnCalendar=*-*-* $sunrise:00\nOnCalendar=*-*-* $sunset:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
-
-
 ### Systemd Service and Timer ###
 set_systemd () {
+
+    kshift_timer="\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\nOnCalendar=*-*-* $sunrise:00\nOnCalendar=*-*-* $sunset:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
 
     kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart=/home/$user/.local/bin/kshift"
 
@@ -155,6 +149,8 @@ remove_self () {
 }
 
 update_timer () {
+
+    kshift_timer="\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\nOnCalendar=*-*-* $sunrise:00\nOnCalendar=*-*-* $sunset:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
 
    echo -e $kshift_timer > $kshift_timer_loc
    systemctl --user daemon-reload
@@ -205,9 +201,9 @@ web_sundata () {
 
     fi
 
-    if [ -f $kshift_timer_loc ]; then
-        update_timer
-    fi
+#   if [ -f $kshift_timer_loc ]; then
+#       update_timer
+#   fi
 
 }
 
@@ -289,12 +285,14 @@ if [ -f $kshift_timer_loc ]; then
         sunset=$(cat $kshift_timer_loc | grep -e "OnCalendar" | awk '{print $2}' | sed "s/:00//" | tail -n 1)
     fi
 
-    kshift
+#   kshift
     if [[ $webdata == 1 ]]; then 
         web_sundata
     fi
 
     [ $update_timer == 1 ] && update_timer
+
+    kshift
 else
 
     [ $webdata == 1 ] && web_sundata
