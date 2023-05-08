@@ -429,8 +429,6 @@ else:
         kshift(Theme("tmp", args.colorscheme, args.wallpaper, None))
 
     else:
-        print(themes)
-        print(today)
 
         theme_to_be = None
 
