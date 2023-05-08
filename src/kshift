@@ -1,305 +1,446 @@
-#!/usr/bin/env bash
+#!/usr/bin/python
 
-user=$(id -u -n)
- 
-kshift_timer_loc="/home/$user/.config/systemd/user/kshift.timer"
-kshift_service_loc="/home/$user/.config/systemd/user/kshift.service"
+import os
+import subprocess
+import re
+import requests
+import datetime
+import yaml
+import argparse
 
-update_timer=0
-
-# 0 for no web
-webdata=1
-
-### User Vars ###
-
-if [ -f "/home/$user/.kshift" ]; then
-    source "/home/$user/.kshift"
-elif [ -f "./defaults" ]; then
-    source "./defaults"
-else
-
-    # Location code from: https://weather.codes/search/
-    location="USNY0996"
-
-    sunrise="06:00"
-    sunset="18:00"
-
-    rise_delay=2
-    set_delay=0
-
-    night_theme="BreezeDark"
-    day_theme="BreezeLight"
-
-    net_timeout=10
-
-fi
-
-tmpfile="/tmp/$location.out"
-
-# if install option is used
-bool_install=0
-
-# If time is changed through options
-bool_timechange=0
-
-# day is 1, night is 2
-day_or_night_force=0
+from functools import total_ordering
 
 
-usage () {
-    echo -e "Usage: kshift OPTIONS [ --install ] [ -h/--help ]\n"
-    echo -e "Sets the system theme to light or dark based on if it is before or after sunrise/sunset"
-    echo -e "After sunrise but before sunset (including delays), is set to light mode "
-    echo -e "Otherwise, the theme is set to dark mode\n"
-    echo -e "  -l  / --location       LOCATION   - sets the location code\n"
+today = datetime.datetime.today().replace(second=0,microsecond=0)
+user = os.getlogin()
 
-    echo -e "  -r  / --sunrise        TIME       - sets default sunrise time"
-    echo -e "  -s  / --sunset         TIME       - sets default sunset time"
-    echo -e "  -rd / --risedelay      HOURS      - delay of sunrise day theme change"
-    echo -e "  -sd / --setdelay       HOURS      - delay of sunset night theme change\n"
+kshift_timer_loc="/home/"+user+"/.config/systemd/user/kshift.timer"
+kshift_service_loc="/home/"+user+"/.config/systemd/user/kshift.service"
 
-    echo -e "  -th / --theme          THEME      - Overrides day and night theme"
-    echo -e "  -w  / --wallpaper      IMAGE      - Overrides day and night wallpaper\n"
-
-    echo -e "  -n  / --night                     - sets the sunset to current time, making it night."
-    echo -e "  -nt / --nightheme      THEME      - theme to be changed to at night"
-    echo -e "  -nw / --nightwallpaper IMAGE      - wallpaper to be changed to at night\n"
-
-    echo -e "  -d  / --day                       - sets the sunrise to current time, making it day."
-    echo -e "  -dt / --daytheme       THEME      - theme to be changed to during the day"
-    echo -e "  -dw / --daywallpaper   IMAGE      - wallpaper to be changed to during the day\n"
-
-    echo -e "  -t  / --timeout        SECONDS    - network timeout\n"
-
-    echo -e "  -u  / --updatetimer               - Updates the systemd timer manually, if installed"
-    echo -e "  -i  / --info                      - Prints status and info of kshift timer and variables"
-    echo -e "  -h  / --help                      - Prints this message\n"
-
-    echo -e "  --install                         - creates a systemd timer and service for automatic kshift"
-    echo -e "  --remove                          - removes the systemd timer and service\n"
-
-    echo -e "The install command will use the current script variables to write a variable file to ~/.kshift.\nUsing the other command options will influence the install."
+defaults = {
+    "location": "USNY0996",
+    "sunrise":"08:00",
+    "sunset":"19:00",
+    "rise_delay": 0,
+    "set_delay": 0,
+    "net_timeout": 10,
+    "webdata": True,
+    "themes": {}
 }
 
-info () {
-    if [ ! -f $kshift_timer_loc ]; then
-        echo -e "Kshift is not installed. Rerun with the '--install' option."
-    else
-        kshift_status=$(systemctl --user status kshift.timer | grep loaded | awk '{print $4}' | sed s/\;//)
-        timer_sunrise=$(cat $kshift_timer_loc | grep OnCalendar | awk '{print $2}' | sed s/:00// | head -1)
-        timer_sunset=$(cat $kshift_timer_loc | grep OnCalendar | awk '{print $2}' | sed s/:00// | tail -1)
+data = {} 
 
-        echo -e "##################################"
+config_loc = "/home/"+user+"/.kshift.yml"
+if not os.path.exists(config_loc):
+    raise OSError("No config at: " + config_loc+". Please run again with '--install'")
+else:
+    config = open(config_loc,"r")
+    config_data = yaml.safe_load(config)
 
-        if [[ $kshift_status == "enabled" ]]; then 
-            echo -e "Kshift ENABLED:"
-            echo -e "    Sunrise kshift at $timer_sunrise"
-            echo -e "    Sunset kshift at $timer_sunset\n"
-        else
-            echo -e "Kshift DISABLED.\n"
-        fi
+    for key in defaults.keys():
+        try:
+            data[key] = config_data[key]
+        except KeyError:
+            data[key] = defaults[key]
 
-        echo -e "##################################"
-        echo -e "kshift local variables @ ~/.kshift"
-        echo -e "##################################\n"
-        cat "/home/$user/.kshift"
-        echo -e "\n##################################"
-    fi
 
-}
+location = data["location"]
+location_chk = re.search("^[A-Z]{4}[0-9]{4}$", location)
+if type(location).__name__ != 'str' or not location_chk:
+    raise TypeError("'location' variable is not set correctly. Visit https://weather.codes/ for correct codes.")
 
-### Systemd Service and Timer ###
-set_systemd () {
 
-    kshift_timer="\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\nOnCalendar=*-*-* $sunrise:00\nOnCalendar=*-*-* $sunset:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
+sunrise = data["sunrise"]
+sunset = data["sunset"]
 
-    kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart=/home/$user/.local/bin/kshift"
+sunrise_chk = re.search("^[0-1]?[0-9]:[0-5][0-9]$", sunrise)
+if type(sunset).__name__ != 'str' or not sunrise_chk:
+    raise TypeError("'sunrise' variable not set correctly. Use the format HH:MM")
+else:
+    sunrise_tmp = datetime.datetime.strptime(sunrise, "%H:%M")
+    sunrise = today.replace(hour= sunrise_tmp.hour, minute=sunrise_tmp.minute)
 
+sunset_chk = re.search("^[0-1]?[0-9]:[0-5][0-9]$", sunset)
+if type(sunset).__name__ != 'str' or not sunset_chk:
+    raise TypeError("'sunset' variable not set correctly. Use the format HH:MM")
+else:
+    sunset_tmp = datetime.datetime.strptime(sunset, "%H:%M")
+    sunset = today.replace(hour= sunset_tmp.hour, minute=sunset_tmp.minute)
 
-    kshift_vars="location=\"$location\"\n\nsunrise=\"$sunrise\"\nsunset=\"$sunset\"\n\nrise_delay=$rise_delay\nset_delay=$set_delay\n\nnight_theme=\"$night_theme\"\nday_theme=\"$day_theme\"\n\nnet_timeout=$net_timeout\n\nday_wallpaper=$day_wallpaper\nnight_wallpaper=$night_wallpaper"
+rise_delay = data["rise_delay"]
+set_delay = data["set_delay"]
 
-   SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+if type(rise_delay).__name__ != 'int' or rise_delay < -23 or rise_delay > 23:
+    raise TypeError("'rise_delay' variable was not set correctly. Use a number between [-23,23]")
 
-   mkdir -p ~/.local/bin
-   cp $SCRIPT_DIR/`basename $0` /home/$user/.local/bin/kshift
+if type(set_delay).__name__ != 'int' or set_delay < -23 or set_delay > 23:
+    raise TypeError("'set_delay' variable was not set correctly. Use a number between [-23,23]")
 
-   echo -e $kshift_vars > /home/$user/.kshift
+net_timeout = data["net_timeout"]
 
-   mkdir -p /home/$user/.config/systemd/user/
+if type(net_timeout).__name__ != 'int' or net_timeout < 0 or net_timeout > 60:
+    raise TypeError("'net_timeout' variable was not set correctly. Use a number between [0,60]")
 
-   echo -e $kshift_service > $kshift_service_loc 
-   echo -e $kshift_timer > $kshift_timer_loc 
+webdata = data["webdata"]
 
-   systemctl --user daemon-reload
-   systemctl --user enable kshift.timer
-   systemctl --user start kshift.timer
-}
+if type(webdata).__name__ != 'bool':
+    raise TypeError("'webdata' variable was not set correctly. Use a boolean value")
 
-remove_self () {
+themes = []
+themes_dic = {}
 
-    systemctl --user stop kshift.timer
-    systemctl --user disable kshift.timer
+tmpfile="/tmp/"+ location+ ".out"
 
-    systemctl --user disable kshift.timer
 
-    rm $kshift_timer_loc
-    rm $kshift_service_loc
 
-    systemctl --user daemon-reload
-}
+# Gets the sundata from the internet and writes it to a tmp file
+# Returns the correct sunstate
+def web_sundata(sunstate):
 
-update_timer () {
+    global sunrise
+    global sunset
 
-    kshift_timer="\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\nOnCalendar=*-*-* $sunrise:00\nOnCalendar=*-*-* $sunset:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
+    url = "https://weather.com/weather/today/l/" + location
+    try:
+        data = requests.get(url, timeout=net_timeout)
+        data = data.text.splitlines()
+        for line in data:
+            re_sun = re.search("SunriseSunset", line)
+            times = re.findall("((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))", line)
+            if re_sun and times:
+                sunrise = datetime.datetime.strptime(times[0][0], "%I:%M %p")
+                sunset = datetime.datetime.strptime(times[1][0], "%I:%M %p")
 
-   echo -e $kshift_timer > $kshift_timer_loc
-   systemctl --user daemon-reload
+                sunrise = today.replace(hour=sunrise.hour, minute=sunrise.minute)
+                sunset = today.replace(hour=sunset.hour, minute=sunset.minute)
 
-}
 
-delay_time () {
+        file = open(tmpfile, "w")
+        file.write(location+"\n")
+        file.write(sunrise.strftime("%a %b %d %X %Y")+"\n")
+        file.write(sunset.strftime("%a %b %d %X %Y"))
+    except Exception:
+        pass
 
-   IFS=":"
+    if sunstate == "sunrise":
+        return sunrise
+    elif sunstate == "sunset":
+        return sunset
+    else:
+        raise ValueError
 
-   read -a rise_arr <<< "$sunrise"
-   read -a set_arr <<< "$sunset"
+# Checks to see if sundata is in the designated tmp file, if not, it calls web_sundata
+# Returns the correct sunstate
+def get_sundata(sunstate):
 
-   rise_arr[0]="$((${rise_arr[0]} + $rise_delay))"
-   set_arr[0]="$((${set_arr[0]} + $set_delay))"
+    global sunrise
+    global sunset
 
-   IFS=""
+    if os.path.exists(tmpfile):
+        tmp = open(tmpfile,"r")
 
-   sunrise=${rise_arr[0]}:${rise_arr[1]} 
-   sunset=${set_arr[0]}:${set_arr[1]}
-}
+        last_location = tmp.readline().strip()
+        #'Wed Dec  4 20:30:40 2002'
+        sunrise_tmp = datetime.datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
+        sunset_tmp = datetime.datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
 
-web_sundata () {
+        tmp.close()
 
-    ### Gather Sun Data ###
+        time_distance = today - sunrise_tmp
+        if time_distance.days >= 1 or last_location != location:
+            return web_sundata(sunstate)
+        else:
+            sunrise = sunrise_tmp
+            sunset = sunset_tmp
 
-    if [ ! -f "$tmpfile" ]; then
+            if sunstate == "sunrise":
+                return sunrise
+            elif sunstate == "sunset":
+                return sunset
+            else:
+                raise ValueError
 
-        i=0
-        while ! nc -zw1 weather.com 443 2> /dev/null && [ $i -lt $net_timeout ]; do 
-            sleep 1
-            ((i+=1))
-        done
+    else:
+        return web_sundata(sunstate)
 
-        if [ $i -lt $net_timeout ]; then
-            wget -q "https://weather.com/weather/today/l/$location" -O "$tmpfile"
-        fi
-    fi
 
-    if [[ -f "$tmpfile" ]]; then
-        SUNR=$(grep SunriseSunset "$tmpfile" | grep -oE '((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))' | head -1)
-        SUNS=$(grep SunriseSunset "$tmpfile" | grep -oE '((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))' | tail -1)
+# Gets the names of all available colorschemes
+def get_colorschemes():
 
-        [ $bool_timechange == 0 ] && sunrise=$(date --date="$SUNR" +%R)
-        [ $bool_timechange == 0 ] && sunset=$(date --date="$SUNS" +%R)
+    arr = []
 
-        delay_time
+    colorscheme_cmd = "plasma-apply-colorscheme -l"
+    output = subprocess.run(colorscheme_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
-    fi
+    for line in output.splitlines():
+        r = re.search(" \* ([A-Za-z]*)", line)
+        if r:
+            arr.append(r.group(1))
 
-#   if [ -f $kshift_timer_loc ]; then
-#       update_timer
-#   fi
+    return arr
 
-}
+# Gets the current colorscheme
+def curr_colorscheme():
 
+    curr = ""
 
-kshift () {
+    colorscheme_cmd = "plasma-apply-colorscheme -l"
+    output = subprocess.run(colorscheme_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
-    ### Epoch Times ###
+    for line in output.splitlines():
+        r = re.search(" \* ([A-Za-z]*) \(current color scheme\)", line)
+        if r:
+            curr = r.group(1)
+            break
 
-    curr_e=$(date +%s)
-    sunrise_e=$(date -d $sunrise +%s)
-    sunset_e=$(date -d $sunset +%s)
+    return curr
 
-    ### Day/Night Switching ###
 
-    exported_vars="export XDG_RUNTIME_DIR=/run/user/$(id -u) &&"
+# Prints the status of Kshift, the timer, and the current config file
+def info():
+    if os.path.exists(kshift_timer_loc):
+        timer_status_cmd = "systemctl --user is-enabled kshift.timer"
+        timer_status = subprocess.run(timer_status_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
-    curr_theme=$(plasma-apply-colorscheme --list-schemes | grep current | awk '{print $2}')
+        print("##################################")
 
-    if [[ $day_or_night_force == 1 || ($day_or_night_force != 2 && $curr_e -ge $sunrise_e && $curr_e -le $sunset_e) ]]; then
+        if timer_status == "enabled":
+            print("Kshift ENABLED:")
+            timer = open(kshift_timer_loc, "r")
+            for line in timer:
+                m = re.search("[0-9]{1,2}:[0-9]{2}:[0-9]{2}", line)
+                if m:
+                    time = m.group(0)
+                    print("    Kshift at "+time)
 
-        [ -z "$theme" ] && theme=$day_theme
-        [ -z "$wallpaper" ] && wallpaper=$day_wallpaper
+            timer.close()
 
-    else
+            print()
+        else:
+            print("Kshift DISABLED.")
 
-        [ -z "$theme" ] && theme=$night_theme
-        [ -z "$wallpaper" ] && wallpaper=$night_wallpaper
 
-    fi
+        print("##################################")
+        print("kshift local variables @" + config_loc)
+        print("##################################")
 
-    ### Wallpaper Set ###
+        for line in open(config_loc):
+            print(line, end='')
 
-    [ ! -z "$wallpaper" ] && eval "$exported_vars plasma-apply-wallpaperimage $wallpaper"
 
-    ### Color Theme Set ###
+# Removes Kshift timer
+def remove_self():
 
-    [[ $curr_theme != $theme ]] && eval "$exported_vars plasma-apply-colorscheme $theme"
+    os.system("systemctl --user stop kshift.timer")
+    os.system("systemctl --user disable kshift.timer")
 
-}
+    os.remove(kshift_timer_loc)
+    os.remove(kshift_service_loc)
 
-while true; do
-    case "$1" in
-        -l | --location ) location="$2"; shift 2;;
+    os.system("systemctl --user daemon-reload")
 
-        -r | --sunrise ) sunrise="$2"; bool_timechange=1; shift 2;;
-        -s | --sunset ) sunset="$2"; bool_timechange=1; shift 2;;
-        -rd | --risedelay ) rise_delay="$2"; shift 2;;
-        -sd | --setdelay ) set_delay="$2"; shift 2;;
 
-        -th | --theme ) theme="$2"; shift 2;;
-        -w  | --wallpaper ) wallpaper="$2"; shift 2;;
+# Adds delay to any times that are "sunset" or "sunrise"
+def delay_time(time:datetime.datetime, sun_pos):
+    delay = 0
+    if sun_pos == "sunrise":
+        delay = rise_delay
+    elif sun_pos == "sunset":
+        delay = set_delay
 
-        -n  | --night ) day_or_night_force=2; shift 1;; 
-        -nt | --nightheme ) night_theme="$2"; shift 2;;
-        -nw | --nightwallpaper ) night_wallpaper="$2"; shift 2;;
+    return time.replace(hour=time.hour + delay)
 
-        -d  | --day ) day_or_night_force=1; shift 1;;
-        -dt | --daytheme ) day_theme="$2"; shift 2;;
-        -dw | --daywallpaper ) day_wallpaper="$2"; shift 2;;
 
-        -t | --timeout ) net_timeout="$2"; shift 2;;
+# Class used for holding a theme data, and sorting these themes
 
-        -u | --updatetimer ) update_timer=1; shift 1;;
-        -i | --info ) info; exit;;
+@total_ordering
+class Theme:
+    attributes = ["colorscheme", "wallpaper", "time"]
 
-        --remove ) remove_self; exit;;
-        --install ) bool_install=1; shift 1;;
-        -h | --help ) usage; exit;;
-        * ) break ;;
-    esac
-done
+    colorschemes = get_colorschemes()
 
-### Main ###
+    def __init__(self, name, colorscheme, wallpaper, time):
+        self.name = name
 
-if [ -f $kshift_timer_loc ]; then
+        if colorscheme == None or self.colorschemes.count(colorscheme) >= 1:
+            self.colorscheme = colorscheme
+        else:
+            raise ValueError("Unknown colorscheme: "+colorscheme)
 
-    if [ $bool_timechange == 0 ]; then
-        sunrise=$(cat $kshift_timer_loc | grep -e "OnCalendar" | awk '{print $2}' | sed "s/:00//" | head -n 1)
-        sunset=$(cat $kshift_timer_loc | grep -e "OnCalendar" | awk '{print $2}' | sed "s/:00//" | tail -n 1)
-    fi
 
-#   kshift
-    if [[ $webdata == 1 ]]; then 
-        web_sundata
-    fi
+        if wallpaper == None or os.path.exists(wallpaper):
+            self.wallpaper = wallpaper
+        else:
+            raise ValueError("Wallpaper does not exist: "+wallpaper)
 
-    [ $update_timer == 1 ] && update_timer
 
-    kshift
-else
+        if time == "sunrise" or time == "sunset":
+            if webdata:
+                self.time = delay_time(get_sundata(time), time)
+            else:
+                tmp_time = datetime.datetime.strptime(data[time], "%H:%M")
+                self.time = delay_time(today.replace(hour=tmp_time.hour, minute=tmp_time.minute), time)
+        elif time == None:
+            self.time = None
+        else:
+            tmp_time = datetime.datetime.strptime(time, "%H:%M")
+            self.time = today.replace(hour=tmp_time.hour, minute=tmp_time.minute)
 
-    [ $webdata == 1 ] && web_sundata
-    kshift
+    def __eq__(self, __o: object) -> bool:
+        return isinstance(__o,Theme) and self.name == __o.name
 
-fi
+    def __ge__(self, __o) -> bool:
+        if isinstance(__o,Theme) and __o.time != None and self.time != None:
+            return self.time > __o.time
+        else:
+            return False
 
-[ $bool_install == 1 ] && set_systemd
+    def __le__(self, __o) -> bool:
+        if isinstance(__o,Theme) and __o.time != None and self.time != None:
+            return self.time < __o.time
+        else:
+            return False
 
-exit 0
+
+    def __repr__(self) -> str:
+        return "Name: {}, ColorScheme: {}, Wallpaper: {}, Time: {}\n".format(self.name,self.colorscheme,self.wallpaper,self.time)
+
+
+# This loop goes through the data from the yaml file
+# it iterates over the attributes for theme, currently colorscheme, wallpaper, and color
+# it then sets a local var to these items and uses it to make a Theme var
+# The theme var is stored in an array and a dictionary
+for name in data["themes"]:
+    loc_vars = locals()
+    for att in Theme.attributes:
+        try:
+            loc_vars.__setitem__(att,data["themes"][name][att])
+        except (KeyError, TypeError):
+            loc_vars.__setitem__(att,None)
+
+    t = Theme(name, colorscheme, wallpaper, time ) 
+
+    themes_dic[name] = t
+
+themes = sorted(themes_dic.values(), reverse=True)
+# Writes the kshift.timer
+# Creates a new trigger for every theme time
+def write_timer():
+
+    file = open(kshift_timer_loc,"w")
+
+    file.write("\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\n")
+
+    for theme in themes:
+        if theme.time:
+            time = theme.time.strftime("%H:%M")
+            file.write("OnCalendar=*-*-* "+time+":00\n")
+
+    file.write("Persistent=true\n\n[Install]\nWantedBy=timers.target")
+
+    file.close()
+
+
+    os.system("systemctl --user daemon-reload")
+    os.system("systemctl --user restart kshift.timer")
+
+
+# Installs kshift
+# Copies executable, creates config file, utilizes the write timer func, and enables the timer
+def install():
+
+    exec_name = os.path.basename(__file__) 
+
+    kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart=/home/"+user+"/.local/bin/"+exec_name
+
+    os.makedirs("/home/"+user+"/.local/bin/", exist_ok=True)
+
+    os.system("cp "+__file__+" /home/"+user+"/.local/bin/"+exec_name)
+
+    var_loc = "/home/"+user+"/.kshift.yml"
+    if not os.path.exists(var_loc):
+        os.system("cp defaults.yml "+var_loc)
+
+    os.makedirs("/home/"+user+"/.config/systemd/user", exist_ok=True)
+
+    file = open(kshift_service_loc, "w")
+    file.write(kshift_service)
+    file.close()
+
+    write_timer()
+
+    os.system("systemctl --user daemon-reload")
+    os.system("systemctl --user enable kshift.timer")
+    os.system("systemctl --user start kshift.timer")
+
+
+# This is where the magic happens
+# Just uses a theme's vars to set the colorscheme and wallpaper
+# This calls write_timer as well, it adds little delay and makes the timer always up to date
+def kshift(theme: Theme):
+
+    if theme.wallpaper:
+        os.system("plasma-apply-wallpaperimage "+ theme.wallpaper)
+
+    if theme.colorscheme and theme.colorscheme != curr_colorscheme():
+        os.system("plasma-apply-colorscheme "+ theme.colorscheme)
+
+    write_timer()
+
+
+# Arg parsing
+
+parser = argparse.ArgumentParser(description="KDE Theme Switching")
+
+parser.add_argument("-w", "--wallpaper", help="Sets the current wallpaper", type=str, required=False)
+parser.add_argument("-c","--colorscheme", type=str,help="Sets the colorscheme", required=False)
+parser.add_argument("-t", "--theme", help="Sets the theme", type=str, choices=list(data["themes"].keys()), required=False)
+
+
+# These cannot be called together 
+install_g = parser.add_mutually_exclusive_group(required=False)
+install_g.add_argument("--install", help="Installs Kshift", action="store_true")
+install_g.add_argument("--remove", help="Removes Kshift", action="store_true")
+install_g.add_argument("-s", "--status", help="Displays kshift timing information", action='store_true')
+
+
+args = parser.parse_args()
+
+if args.status:
+    info()
+elif args.install:
+
+    answer = input("Are you sure you want to install Kshift? [y/n]: ")
+    if answer == "Y" or answer == "y" or answer == "yes":
+        install()
+
+elif args.remove:
+
+    answer = input("Are you sure you want to remove Kshift? [y/n]: ")
+    if answer == "Y" or answer == "y" or answer == "yes":
+        remove_self()
+
+else:
+
+    if args.theme or args.wallpaper or args.colorscheme:
+        if args.theme:
+            kshift(themes_dic[args.theme])
+
+        kshift(Theme("tmp", args.colorscheme, args.wallpaper, None))
+
+    else:
+        print(themes)
+        print(today)
+
+        theme_to_be = None
+
+        # if the time is >= the theme time, it should be that one to switch
+        for theme in themes:
+            if theme_to_be == None and today >= theme.time:
+                theme_to_be = theme
+   
+        if theme_to_be:
+            kshift(theme_to_be)
+
+# TO DO:
+# make get_sundata not call to webdata or do extra functions if sunset/sunrise had already been changed

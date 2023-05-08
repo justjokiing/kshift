@@ -1,0 +1,17 @@
+
+location: USNY0996
+sunrise: '07:00'
+sunset: '19:00'
+rise_delay: 0
+set_delay: 0
+webdata: true
+net_timeout: 10
+themes:
+  day:
+    colorscheme: BreezeLight
+    wallpaper: /usr/share/wallpapers/Flow/contents/images/5120x2880.jpg
+    time: sunrise
+  night:
+    colorscheme: BreezeDark
+    wallpaper: /usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg
+    time: sunset
