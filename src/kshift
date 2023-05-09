@@ -25,14 +25,27 @@ defaults = {
     "set_delay": 0,
     "net_timeout": 10,
     "webdata": True,
-    "themes": {}
+    "themes": { 
+        'day': {
+            'colorscheme': 'BreezeLight', 
+            'wallpaper': '/usr/share/wallpapers/Flow/contents/images/5120x2880.jpg', 
+            'time': 'sunrise'
+        }, 
+        'night': {
+            'colorscheme': 'BreezeDark', 
+            'wallpaper': '/usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg', 
+            'time': 'sunset'
+        }
+    }
 }
 
-data = {} 
+data = {}
 
 config_loc = "/home/"+user+"/.kshift.yml"
 if not os.path.exists(config_loc):
-    raise OSError("No config at: " + config_loc+". Please run again with '--install'")
+    data = defaults
+    print("No config at: " + config_loc+".\nTo change Kshift options, edit 'defaults.yml' and run again with '--install'")
+    #raise OSError("No config at: " + config_loc+". Please run again with '--install'")
 else:
     config = open(config_loc,"r")
     config_data = yaml.safe_load(config)
@@ -197,8 +210,8 @@ def curr_colorscheme():
 
 
 # Prints the status of Kshift, the timer, and the current config file
-def info():
-    if os.path.exists(kshift_timer_loc):
+def status():
+    if os.path.exists(kshift_timer_loc) and os.path.exists(config_loc):
         timer_status_cmd = "systemctl --user is-enabled kshift.timer"
         timer_status = subprocess.run(timer_status_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
@@ -226,10 +239,14 @@ def info():
 
         for line in open(config_loc):
             print(line, end='')
+    else:
+        print("Kshift not installed. Edit 'defaults.yml' and run again with --install")
 
 
 # Removes Kshift timer
 def remove_self():
+
+    print("Removing kshift.timer and service...")
 
     os.system("systemctl --user stop kshift.timer")
     os.system("systemctl --user disable kshift.timer")
@@ -323,6 +340,8 @@ for name in data["themes"]:
     themes_dic[name] = t
 
 themes = sorted(themes_dic.values(), reverse=True)
+
+
 # Writes the kshift.timer
 # Creates a new trigger for every theme time
 def write_timer():
@@ -353,22 +372,26 @@ def install():
 
     kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart=/home/"+user+"/.local/bin/"+exec_name
 
+    print("Copying Kshift to .local/bin...")
     os.makedirs("/home/"+user+"/.local/bin/", exist_ok=True)
 
     os.system("cp "+__file__+" /home/"+user+"/.local/bin/"+exec_name)
 
     var_loc = "/home/"+user+"/.kshift.yml"
     if not os.path.exists(var_loc):
+        print("Copying 'defaults.yml' to"+ var_loc+"...")
         os.system("cp defaults.yml "+var_loc)
 
     os.makedirs("/home/"+user+"/.config/systemd/user", exist_ok=True)
 
+    print("Writing kshift.service and kshift.timer...")
     file = open(kshift_service_loc, "w")
     file.write(kshift_service)
     file.close()
 
     write_timer()
 
+    print("Enabling kshift.timer...")
     os.system("systemctl --user daemon-reload")
     os.system("systemctl --user enable kshift.timer")
     os.system("systemctl --user start kshift.timer")
@@ -385,7 +408,8 @@ def kshift(theme: Theme):
     if theme.colorscheme and theme.colorscheme != curr_colorscheme():
         os.system("plasma-apply-colorscheme "+ theme.colorscheme)
 
-    write_timer()
+    if os.path.exists(kshift_timer_loc):
+        write_timer()
 
 
 # Arg parsing
@@ -407,7 +431,7 @@ install_g.add_argument("-s", "--status", help="Displays kshift timing informatio
 args = parser.parse_args()
 
 if args.status:
-    info()
+    status()
 elif args.install:
 
     answer = input("Are you sure you want to install Kshift? [y/n]: ")

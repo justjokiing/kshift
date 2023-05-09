@@ -1,11 +1,10 @@
-
-location: USNY0996
-sunrise: '07:00'
-sunset: '19:00'
-rise_delay: 0
-set_delay: 0
-webdata: true
-net_timeout: 10
+location: USNY0996 # Location Code from https://weather.codes/search
+sunrise: '07:00'   # Default sunrise time, when time data cannot be accessed. These must be in quotes.
+sunset: '19:00'    # Default sunset  time
+rise_delay: 0      # Hour delay for sunrise, can be negative
+set_delay: 0       # Hour delay for sunset
+webdata: true      # Boolean for accessing web for time data
+net_timeout: 10    # How long to wait for network timeout
 themes:
   day:
     colorscheme: BreezeLight
