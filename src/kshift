@@ -272,11 +272,13 @@ def delay_time(time:datetime.datetime, sun_pos):
 
 @total_ordering
 class Theme:
-    attributes = ["colorscheme", "wallpaper", "time"]
+    attributes = ["colorscheme", "wallpaper", "command", "time"]
+    #attributes = ["colorscheme", "wallpaper", "time"]
 
     colorschemes = get_colorschemes()
 
-    def __init__(self, name, colorscheme, wallpaper, time):
+    def __init__(self, name, colorscheme, wallpaper, command, time):
+    #def __init__(self, name, colorscheme, wallpaper, time):
         self.name = name
 
         if colorscheme == None or self.colorschemes.count(colorscheme) >= 1:
@@ -289,6 +291,8 @@ class Theme:
             self.wallpaper = wallpaper
         else:
             raise ValueError("Wallpaper does not exist: "+wallpaper)
+
+        self.command = command
 
 
         if time == "sunrise" or time == "sunset":
@@ -335,7 +339,8 @@ for name in data["themes"]:
         except (KeyError, TypeError):
             loc_vars.__setitem__(att,None)
 
-    t = Theme(name, colorscheme, wallpaper, time ) 
+    #t = Theme(name, colorscheme, wallpaper, time ) 
+    t = Theme(name, colorscheme, wallpaper, command, time ) 
 
     themes_dic[name] = t
 
@@ -411,6 +416,9 @@ def kshift(theme: Theme):
     if os.path.exists(kshift_timer_loc):
         write_timer()
 
+    if theme.command:
+        os.system(theme.command)
+
 
 # Arg parsing
 
@@ -450,7 +458,9 @@ else:
         if args.theme:
             kshift(themes_dic[args.theme])
 
-        kshift(Theme("tmp", args.colorscheme, args.wallpaper, None))
+        if args.theme or args.wallpaper:
+            #kshift(Theme("tmp", args.colorscheme, args.wallpaper, None))
+            kshift(Theme("tmp", args.colorscheme, args.wallpaper, None, None))
 
     else:
 
