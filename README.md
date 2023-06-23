@@ -9,7 +9,7 @@
 
 This demo is in the day, showing that the default usage will change it to the day theme if it is set to run at sunrise.
 
-https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-b392-2ba4726954e5.mp4
+https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bdfcd431772d
 
 
 ## Usage
