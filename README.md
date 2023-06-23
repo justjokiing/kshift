@@ -8,6 +8,7 @@
 ## Demo
 
 This demo shows a shift from one theme to another manually, then kshift determining the correct theme to switch to.
+
 https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bdfcd431772d
 
 
