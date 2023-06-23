@@ -1,62 +1,41 @@
 # kshift - KDE Theme Shift
 
- kshift is a KDE dark/light shift script that activates at sunrise and sunset when installed. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes and `plasma-apply-wallpaperimage` for wallpapers.
+ kshift is a KDE theme shifting script that activates at set times to switch themes, including sunrise and sunset. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes, `plasma-apply-wallpaperimage` for wallpapers, and python `os.system()` for commands.
 
  During installation, kshift sets systemd timers to run the script at sunrise and sunset.
- If installed, the default will have the timer update its times when ran.
+ If installed, the timer update its times when ran.
 
 ## Demo
 
-This demo is in the day, showing that the default usage will change it to the day theme.
+This demo is in the day, showing that the default usage will change it to the day theme if it is set to run at sunrise.
 
 https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-b392-2ba4726954e5.mp4
 
 
 ## Usage
 
-      Usage: kshift OPTIONS [ --install ] [ -h/--help ]
+    usage: kshift [-h] [-w WALLPAPER] [-c COLORSCHEME] [-t {day,night}] [--install | --remove | -s]
 
-      Sets the system theme to light or dark based on if it is before or after sunrise/sunset
-      After sunrise but before sunset (including delays), is set to light mode 
-      Otherwise, the theme is set to dark mode
+    KDE Theme Switching
 
-        -l  / --location       LOCATION   - sets the location code
-
-        -r  / --sunrise        TIME       - sets default sunrise time
-        -s  / --sunset         TIME       - sets default sunset time
-        -rd / --risedelay      HOURS      - delay of sunrise day theme change
-        -sd / --setdelay       HOURS      - delay of sunset night theme change
-
-        -th / --theme          THEME      - Overrides day and night theme
-        -w  / --wallpaper      IMAGE      - Overrides day and night wallpaper
-
-        -n  / --night                     - sets the sunset to current time, making it night.
-        -nt / --nightheme      THEME      - theme to be changed to at night
-        -nw / --nightwallpaper IMAGE      - wallpaper to be changed to at night
-
-        -d  / --day                       - sets the sunrise to current time, making it day.
-        -dt / --daytheme       THEME      - theme to be changed to during the day
-        -dw / --daywallpaper   IMAGE      - wallpaper to be changed to during the day
-
-        -t  / --timeout        SECONDS    - network timeout
-
-        -u  / --updatetimer               - Updates the systemd timer if installed
-        -i  / --info                      - Prints status and info of kshift timer and variables
-        -h  / --help                      - Prints this message
-
-        --install                         - creates a systemd timer and service for automatic kshift
-        --remove                          - removes the systemd timer and service
-
-      The install command will use the current script variables to write a variable file to ~/.kshift.
-      Using the other command options will influence the install.
+    options:
+      -h, --help            show this help message and exit
+      -w WALLPAPER, --wallpaper WALLPAPER
+                            Sets the current wallpaper
+      -c COLORSCHEME, --colorscheme COLORSCHEME
+                            Sets the colorscheme
+      -t {day,night}, --theme {day,night}
+                            Sets the theme
+      --install             Installs Kshift
+      --remove              Removes Kshift
+      -s, --status          Displays kshift timing information
 
 ## Installation
 
 #### Required Programs
 * KDE Plasma
-* Netcat
-* Wget
 * Systemd
+* Python 3
 
 #### Instructions
 
@@ -65,38 +44,43 @@ https://user-images.githubusercontent.com/64444712/217895962-ab51fc93-48c3-4edf-
     $ git clone https://github.com/justjokiing/kshift
     $ cd kshift/src
     ```
-2. Edit the default variables in the variable file `defaults` or look at usage for command line arguments
+2. Edit the default variables in the variable file `defaults.yml` or look at usage for command line arguments    
+   ```
+    location: USNY0996 # Location Code from https://weather.codes/search
+    sunrise: '07:00'   # Default sunrise time, when time data cannot be accessed. These must be in quotes.
+    sunset: '19:00'    # Default sunset  time
+    rise_delay: 0      # Hour delay for sunrise, can be negative
+    set_delay: 0       # Hour delay for sunset
+    webdata: true      # Boolean for accessing web for time data
+    net_timeout: 10    # How long to wait for network timeout
+    themes:
+      day:
+        colorscheme: BreezeLight  # Check 'plasma-apply-colorscheme -l' for options
+        wallpaper: /usr/share/wallpapers/Flow/contents/images/5120x2880.jpg
+        command: ''               # Runs command at theme activation
+        time: sunrise             # Keywords 'sunrise', 'sunset', or time in 'HH:MM' format
+      night:
+        colorscheme: BreezeDark
+        wallpaper: /usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg
+        command: ''
+        time: sunset
+   ```
+	The themes default are set to a set of default day and night KDE themes and wallpapers. You can add as many themes as you would like at many different times, wallpapers, commands, and colorschemes. None of the theme variables are required. If time is not set, there will be no automatic transition.
+    
+    The time variables "sunrise" and "sunset" are keywords to kshift and are replaced with the sunrise and sunset times that your location variable sets. __Make sure to use correct YAML syntax.__
 
-| Variable  | Default Values | Useage |
-| --------- | -------------- | ------ |
-| webdata | 1 | Determines if kshift searches for sun data, 1 means on, 0 means off
-| location | USNY0996 | Location code from https://weather.codes/search |
-| sunrise | 6:00 | Sunrise time used when there is no internet or webdata |
-| sunset | 18:00 | Sunset time used when there is no internet or webdata |
-| rise_delay | 2 | Number of hours to delay theme change in the morning. This can be negative. Only for webdata |
-| set_delay | 0 | Number of hours to delay theme change at night. This can be negative. Only for webdata |
-| night_theme[^1] | BreezeDark | Theme to be changed to at sunset. |
-| day_theme[^1] | BreezeLight | Theme to be changed to at sunrise. |
-| day_wallpaper | None | Wallpaper to be switched to during the day |
-| night_wallpaper | None | Wallpaper to be switched at night |
-| theme | None | Overrides the theme for day and night |
-| wallpaper | None | Overrrides the wallpaper for day and night |
-| net_timeout | 10 | Number of seconds to wait for internet connection |
-
-[^1]: Themes can be found by `plasma-apply-colorscheme --list-schemes`
 
 3. Create the systemd services and add kshift to local bin
     ```
-    $ ./kshift --install [OPTIONS]
+    $ ./kshift --install
     ```
 
-    If you did not edit the `defaults` file, make sure to add command line arguments to change the default values during installation.
+    kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be updated after each execution. 
 
-    kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be set from the web by default, updating the timer each time. Setting the variable `webdata` to 0 will make the timer stop updating automatically. 
-
-    kshift variables will then be located at `~/.kshift` and follows the same format of `defaults`, any further variable can be done by editing that file or using the `--install` option.
+    kshift variables will then be located at `~/.kshift.yml` and follows the same format of `defaults.yml`, any further variable can be done by editing that file or using the `--install` option.
 
 4. Now check to see if the system timers are on and working.
     ```
-    $ ./kshift --info
+    $ ./kshift --status
     ```
+  Then test out your themes.

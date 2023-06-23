@@ -7,10 +7,12 @@ webdata: true      # Boolean for accessing web for time data
 net_timeout: 10    # How long to wait for network timeout
 themes:
   day:
-    colorscheme: BreezeLight
+    colorscheme: BreezeLight  # Check 'plasma-apply-colorscheme -l' for options
     wallpaper: /usr/share/wallpapers/Flow/contents/images/5120x2880.jpg
-    time: sunrise
+    command: ''               # Runs command at theme activation
+    time: sunrise             # Keywords 'sunrise', 'sunset', or time in 'HH:MM' format
   night:
     colorscheme: BreezeDark
     wallpaper: /usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg
+    command: ''
     time: sunset

@@ -7,15 +7,26 @@ import requests
 import datetime
 import yaml
 import argparse
+import colorama
 
 from functools import total_ordering
 
+###################################
+# Config and variable items
+###################################
 
 today = datetime.datetime.today().replace(second=0,microsecond=0)
+home = os.getenv('HOME')
 user = os.getlogin()
 
-kshift_timer_loc="/home/"+user+"/.config/systemd/user/kshift.timer"
-kshift_service_loc="/home/"+user+"/.config/systemd/user/kshift.service"
+if home == None:
+    if user == 'root':
+        home = "/root"
+    else:
+        home = '/home/'+user
+
+kshift_timer_loc= home+"/.config/systemd/user/kshift.timer"
+kshift_service_loc= home+"/.config/systemd/user/kshift.service"
 
 defaults = {
     "location": "USNY0996",
@@ -41,11 +52,14 @@ defaults = {
 
 data = {}
 
-config_loc = "/home/"+user+"/.kshift.yml"
+config_loc = os.getenv("XDG_CONFIG_HOME")
+if config_loc == None:
+    config_loc = home+'/.config'
+
+config_loc = config_loc + '/kshift.yml'
 if not os.path.exists(config_loc):
     data = defaults
     print("No config at: " + config_loc+".\nTo change Kshift options, edit 'defaults.yml' and run again with '--install'")
-    #raise OSError("No config at: " + config_loc+". Please run again with '--install'")
 else:
     config = open(config_loc,"r")
     config_data = yaml.safe_load(config)
@@ -104,6 +118,10 @@ themes_dic = {}
 
 tmpfile="/tmp/"+ location+ ".out"
 
+
+###################################
+# Theme and Helper Functions
+###################################
 
 
 # Gets the sundata from the internet and writes it to a tmp file
@@ -218,7 +236,7 @@ def status():
         print("##################################")
 
         if timer_status == "enabled":
-            print("Kshift ENABLED:")
+            print("Kshift "+colorama.Fore.GREEN + "ENABLED"+colorama.Fore.WHITE +":")
             timer = open(kshift_timer_loc, "r")
             for line in timer:
                 m = re.search("[0-9]{1,2}:[0-9]{2}:[0-9]{2}", line)
@@ -230,7 +248,7 @@ def status():
 
             print()
         else:
-            print("Kshift DISABLED.")
+            print("Kshift "+ colorama.Fore.RED+ "DISABLED."+ colorama.Fore.WHITE)
 
 
         print("##################################")
@@ -241,20 +259,6 @@ def status():
             print(line, end='')
     else:
         print("Kshift not installed. Edit 'defaults.yml' and run again with --install")
-
-
-# Removes Kshift timer
-def remove_self():
-
-    print("Removing kshift.timer and service...")
-
-    os.system("systemctl --user stop kshift.timer")
-    os.system("systemctl --user disable kshift.timer")
-
-    os.remove(kshift_timer_loc)
-    os.remove(kshift_service_loc)
-
-    os.system("systemctl --user daemon-reload")
 
 
 # Adds delay to any times that are "sunset" or "sunrise"
@@ -278,7 +282,6 @@ class Theme:
     colorschemes = get_colorschemes()
 
     def __init__(self, name, colorscheme, wallpaper, command, time):
-    #def __init__(self, name, colorscheme, wallpaper, time):
         self.name = name
 
         if colorscheme == None or self.colorschemes.count(colorscheme) >= 1:
@@ -339,13 +342,15 @@ for name in data["themes"]:
         except (KeyError, TypeError):
             loc_vars.__setitem__(att,None)
 
-    #t = Theme(name, colorscheme, wallpaper, time ) 
     t = Theme(name, colorscheme, wallpaper, command, time ) 
 
     themes_dic[name] = t
 
 themes = sorted(themes_dic.values(), reverse=True)
 
+###################################
+# IO Functions
+###################################
 
 # Writes the kshift.timer
 # Creates a new trigger for every theme time
@@ -375,19 +380,19 @@ def install():
 
     exec_name = os.path.basename(__file__) 
 
-    kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart=/home/"+user+"/.local/bin/"+exec_name
+    kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart="+home+"/.local/bin/"+exec_name
 
     print("Copying Kshift to .local/bin...")
-    os.makedirs("/home/"+user+"/.local/bin/", exist_ok=True)
+    os.makedirs(home+"/.local/bin/", exist_ok=True)
 
-    os.system("cp "+__file__+" /home/"+user+"/.local/bin/"+exec_name)
+    os.system("cp "+__file__+" "+home+"/.local/bin/"+exec_name)
 
-    var_loc = "/home/"+user+"/.kshift.yml"
+    var_loc = config_loc
     if not os.path.exists(var_loc):
         print("Copying 'defaults.yml' to"+ var_loc+"...")
         os.system("cp defaults.yml "+var_loc)
 
-    os.makedirs("/home/"+user+"/.config/systemd/user", exist_ok=True)
+    os.makedirs(home+"/.config/systemd/user", exist_ok=True)
 
     print("Writing kshift.service and kshift.timer...")
     file = open(kshift_service_loc, "w")
@@ -400,6 +405,25 @@ def install():
     os.system("systemctl --user daemon-reload")
     os.system("systemctl --user enable kshift.timer")
     os.system("systemctl --user start kshift.timer")
+
+
+# Removes Kshift timer
+def remove_self():
+
+    print("Removing kshift.timer and service...")
+
+    os.system("systemctl --user stop kshift.timer")
+    os.system("systemctl --user disable kshift.timer")
+
+    os.remove(kshift_timer_loc)
+    os.remove(kshift_service_loc)
+
+    os.system("systemctl --user daemon-reload")
+
+
+###################################
+# Kshift
+###################################
 
 
 # This is where the magic happens
@@ -420,7 +444,9 @@ def kshift(theme: Theme):
         os.system(theme.command)
 
 
+###################################
 # Arg parsing
+###################################
 
 parser = argparse.ArgumentParser(description="KDE Theme Switching")
 
@@ -459,7 +485,6 @@ else:
             kshift(themes_dic[args.theme])
 
         if args.theme or args.wallpaper:
-            #kshift(Theme("tmp", args.colorscheme, args.wallpaper, None))
             kshift(Theme("tmp", args.colorscheme, args.wallpaper, None, None))
 
     else:
@@ -467,12 +492,15 @@ else:
         theme_to_be = None
 
         # if the time is >= the theme time, it should be that one to switch
+        # if none is greater, then do nothing.
         for theme in themes:
-            if theme_to_be == None and today >= theme.time:
+
+            if theme.time == None:
+                break
+            elif today >= theme.time:
                 theme_to_be = theme
+                break
    
         if theme_to_be:
             kshift(theme_to_be)
 
-# TO DO:
-# make get_sundata not call to webdata or do extra functions if sunset/sunrise had already been changed
