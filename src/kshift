@@ -52,11 +52,11 @@ defaults = {
 
 data = {}
 
-config_loc = os.getenv("XDG_CONFIG_HOME")
-if config_loc == None:
-    config_loc = home+'/.config'
+config_loc_base = os.getenv("XDG_CONFIG_HOME")
+if config_loc_base is None:
+    config_loc_base = home+'/.config'
 
-config_loc = config_loc + '/kshift.yml'
+config_loc = config_loc_base + '/kshift.yml'
 if not os.path.exists(config_loc):
     data = defaults
     print("No config at: " + config_loc+".\nTo change Kshift options, edit 'defaults.yml' and run again with '--install'")
@@ -388,6 +388,10 @@ def install():
     os.system("cp "+__file__+" "+home+"/.local/bin/"+exec_name)
 
     var_loc = config_loc
+    # Make config dir, possibly read config env
+    if not os.path.exists(config_loc_base):
+        os.makedirs(config_loc_base)
+
     if not os.path.exists(var_loc):
         print("Copying 'defaults.yml' to"+ var_loc+"...")
         os.system("cp defaults.yml "+var_loc)

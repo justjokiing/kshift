@@ -2,8 +2,8 @@
 
  kshift is a KDE theme shifting script that activates at set times to switch themes, including sunrise and sunset. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes, `plasma-apply-wallpaperimage` for wallpapers, and python `os.system()` for commands.
 
- During installation, kshift sets systemd timers to run the script at sunrise and sunset.
- If installed, the timer update its times when ran.
+ During installation, kshift sets systemd timers to run the script at any time a theme is set, including sunrise/sunset.
+ The sunrise and sunset times are updated when kshift is ran.
 
 ## Demo
 
