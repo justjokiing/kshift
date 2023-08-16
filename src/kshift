@@ -1,352 +1,35 @@
 #!/usr/bin/python
 
-import os
-import subprocess
-import re
-import requests
-import datetime
-import yaml
 import argparse
-import colorama
+import os
 
-from functools import total_ordering
+import conf
+import theme
 
-###################################
-# Config and variable items
-###################################
-
-today = datetime.datetime.today().replace(second=0,microsecond=0)
-home = os.getenv('HOME')
-user = os.getlogin()
-
-if home == None:
-    if user == 'root':
-        home = "/root"
-    else:
-        home = '/home/'+user
-
-kshift_timer_loc= home+"/.config/systemd/user/kshift.timer"
-kshift_service_loc= home+"/.config/systemd/user/kshift.service"
-
-defaults = {
-    "location": "USNY0996",
-    "sunrise":"08:00",
-    "sunset":"19:00",
-    "rise_delay": 0,
-    "set_delay": 0,
-    "net_timeout": 10,
-    "webdata": True,
-    "themes": { 
-        'day': {
-            'colorscheme': 'BreezeLight', 
-            'wallpaper': '/usr/share/wallpapers/Flow/contents/images/5120x2880.jpg', 
-            'time': 'sunrise'
-        }, 
-        'night': {
-            'colorscheme': 'BreezeDark', 
-            'wallpaper': '/usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg', 
-            'time': 'sunset'
-        }
-    }
-}
-
-data = {}
-
-config_loc_base = os.getenv("XDG_CONFIG_HOME")
-if config_loc_base is None:
-    config_loc_base = home+'/.config'
-
-config_loc = config_loc_base + '/kshift.yml'
-if not os.path.exists(config_loc):
-    data = defaults
-    print("No config at: " + config_loc+".\nTo change Kshift options, edit 'defaults.yml' and run again with '--install'")
-else:
-    config = open(config_loc,"r")
-    config_data = yaml.safe_load(config)
-
-    for key in defaults.keys():
-        try:
-            data[key] = config_data[key]
-        except KeyError:
-            data[key] = defaults[key]
-
-
-location = data["location"]
-location_chk = re.search("^[A-Z]{4}[0-9]{4}$", location)
-if type(location).__name__ != 'str' or not location_chk:
-    raise TypeError("'location' variable is not set correctly. Visit https://weather.codes/ for correct codes.")
-
-
-sunrise = data["sunrise"]
-sunset = data["sunset"]
-
-sunrise_chk = re.search("^[0-1]?[0-9]:[0-5][0-9]$", sunrise)
-if type(sunset).__name__ != 'str' or not sunrise_chk:
-    raise TypeError("'sunrise' variable not set correctly. Use the format HH:MM")
-else:
-    sunrise_tmp = datetime.datetime.strptime(sunrise, "%H:%M")
-    sunrise = today.replace(hour= sunrise_tmp.hour, minute=sunrise_tmp.minute)
-
-sunset_chk = re.search("^[0-1]?[0-9]:[0-5][0-9]$", sunset)
-if type(sunset).__name__ != 'str' or not sunset_chk:
-    raise TypeError("'sunset' variable not set correctly. Use the format HH:MM")
-else:
-    sunset_tmp = datetime.datetime.strptime(sunset, "%H:%M")
-    sunset = today.replace(hour= sunset_tmp.hour, minute=sunset_tmp.minute)
-
-rise_delay = data["rise_delay"]
-set_delay = data["set_delay"]
-
-if type(rise_delay).__name__ != 'int' or rise_delay < -23 or rise_delay > 23:
-    raise TypeError("'rise_delay' variable was not set correctly. Use a number between [-23,23]")
-
-if type(set_delay).__name__ != 'int' or set_delay < -23 or set_delay > 23:
-    raise TypeError("'set_delay' variable was not set correctly. Use a number between [-23,23]")
-
-net_timeout = data["net_timeout"]
-
-if type(net_timeout).__name__ != 'int' or net_timeout < 0 or net_timeout > 60:
-    raise TypeError("'net_timeout' variable was not set correctly. Use a number between [0,60]")
-
-webdata = data["webdata"]
-
-if type(webdata).__name__ != 'bool':
-    raise TypeError("'webdata' variable was not set correctly. Use a boolean value")
 
 themes = []
 themes_dic = {}
 
-tmpfile="/tmp/"+ location+ ".out"
-
-
-###################################
-# Theme and Helper Functions
-###################################
-
-
-# Gets the sundata from the internet and writes it to a tmp file
-# Returns the correct sunstate
-def web_sundata(sunstate):
-
-    global sunrise
-    global sunset
-
-    url = "https://weather.com/weather/today/l/" + location
-    try:
-        data = requests.get(url, timeout=net_timeout)
-        data = data.text.splitlines()
-        for line in data:
-            re_sun = re.search("SunriseSunset", line)
-            times = re.findall("((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))", line)
-            if re_sun and times:
-                sunrise = datetime.datetime.strptime(times[0][0], "%I:%M %p")
-                sunset = datetime.datetime.strptime(times[1][0], "%I:%M %p")
-
-                sunrise = today.replace(hour=sunrise.hour, minute=sunrise.minute)
-                sunset = today.replace(hour=sunset.hour, minute=sunset.minute)
-
-
-        file = open(tmpfile, "w")
-        file.write(location+"\n")
-        file.write(sunrise.strftime("%a %b %d %X %Y")+"\n")
-        file.write(sunset.strftime("%a %b %d %X %Y"))
-    except Exception:
-        pass
-
-    if sunstate == "sunrise":
-        return sunrise
-    elif sunstate == "sunset":
-        return sunset
-    else:
-        raise ValueError
-
-# Checks to see if sundata is in the designated tmp file, if not, it calls web_sundata
-# Returns the correct sunstate
-def get_sundata(sunstate):
-
-    global sunrise
-    global sunset
-
-    if os.path.exists(tmpfile):
-        tmp = open(tmpfile,"r")
-
-        last_location = tmp.readline().strip()
-        #'Wed Dec  4 20:30:40 2002'
-        sunrise_tmp = datetime.datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
-        sunset_tmp = datetime.datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
-
-        tmp.close()
-
-        time_distance = today - sunrise_tmp
-        if time_distance.days >= 1 or last_location != location:
-            return web_sundata(sunstate)
-        else:
-            sunrise = sunrise_tmp
-            sunset = sunset_tmp
-
-            if sunstate == "sunrise":
-                return sunrise
-            elif sunstate == "sunset":
-                return sunset
-            else:
-                raise ValueError
-
-    else:
-        return web_sundata(sunstate)
-
-
-# Gets the names of all available colorschemes
-def get_colorschemes():
-
-    arr = []
-
-    colorscheme_cmd = "plasma-apply-colorscheme -l"
-    output = subprocess.run(colorscheme_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
-
-    for line in output.splitlines():
-        r = re.search(" \* ([A-Za-z]*)", line)
-        if r:
-            arr.append(r.group(1))
-
-    return arr
-
-# Gets the current colorscheme
-def curr_colorscheme():
-
-    curr = ""
-
-    colorscheme_cmd = "plasma-apply-colorscheme -l"
-    output = subprocess.run(colorscheme_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
-
-    for line in output.splitlines():
-        r = re.search(" \* ([A-Za-z]*) \(current color scheme\)", line)
-        if r:
-            curr = r.group(1)
-            break
-
-    return curr
-
-
-# Prints the status of Kshift, the timer, and the current config file
-def status():
-    if os.path.exists(kshift_timer_loc) and os.path.exists(config_loc):
-        timer_status_cmd = "systemctl --user is-enabled kshift.timer"
-        timer_status = subprocess.run(timer_status_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
-
-        print("##################################")
-
-        if timer_status == "enabled":
-            print("Kshift "+colorama.Fore.GREEN + "ENABLED"+colorama.Fore.WHITE +":")
-            timer = open(kshift_timer_loc, "r")
-            for line in timer:
-                m = re.search("[0-9]{1,2}:[0-9]{2}:[0-9]{2}", line)
-                if m:
-                    time = m.group(0)
-                    print("    Kshift at "+time)
-
-            timer.close()
-
-            print()
-        else:
-            print("Kshift "+ colorama.Fore.RED+ "DISABLED."+ colorama.Fore.WHITE)
-
-
-        print("##################################")
-        print("kshift local variables @" + config_loc)
-        print("##################################")
-
-        for line in open(config_loc):
-            print(line, end='')
-    else:
-        print("Kshift not installed. Edit 'defaults.yml' and run again with --install")
-
-
-# Adds delay to any times that are "sunset" or "sunrise"
-def delay_time(time:datetime.datetime, sun_pos):
-    delay = 0
-    if sun_pos == "sunrise":
-        delay = rise_delay
-    elif sun_pos == "sunset":
-        delay = set_delay
-
-    return time.replace(hour=time.hour + delay)
-
-
-# Class used for holding a theme data, and sorting these themes
-
-@total_ordering
-class Theme:
-    attributes = ["colorscheme", "wallpaper", "command", "time"]
-    #attributes = ["colorscheme", "wallpaper", "time"]
-
-    colorschemes = get_colorschemes()
-
-    def __init__(self, name, colorscheme, wallpaper, command, time):
-        self.name = name
-
-        if colorscheme == None or self.colorschemes.count(colorscheme) >= 1:
-            self.colorscheme = colorscheme
-        else:
-            raise ValueError("Unknown colorscheme: "+colorscheme)
-
-
-        if wallpaper == None or os.path.exists(wallpaper):
-            self.wallpaper = wallpaper
-        else:
-            raise ValueError("Wallpaper does not exist: "+wallpaper)
-
-        self.command = command
-
-
-        if time == "sunrise" or time == "sunset":
-            if webdata:
-                self.time = delay_time(get_sundata(time), time)
-            else:
-                tmp_time = datetime.datetime.strptime(data[time], "%H:%M")
-                self.time = delay_time(today.replace(hour=tmp_time.hour, minute=tmp_time.minute), time)
-        elif time == None:
-            self.time = None
-        else:
-            tmp_time = datetime.datetime.strptime(time, "%H:%M")
-            self.time = today.replace(hour=tmp_time.hour, minute=tmp_time.minute)
-
-    def __eq__(self, __o: object) -> bool:
-        return isinstance(__o,Theme) and self.name == __o.name
-
-    def __ge__(self, __o) -> bool:
-        if isinstance(__o,Theme) and __o.time != None and self.time != None:
-            return self.time > __o.time
-        else:
-            return False
-
-    def __le__(self, __o) -> bool:
-        if isinstance(__o,Theme) and __o.time != None and self.time != None:
-            return self.time < __o.time
-        else:
-            return False
-
-
-    def __repr__(self) -> str:
-        return "Name: {}, ColorScheme: {}, Wallpaper: {}, Time: {}\n".format(self.name,self.colorscheme,self.wallpaper,self.time)
-
+c = conf.config();
 
 # This loop goes through the data from the yaml file
 # it iterates over the attributes for theme, currently colorscheme, wallpaper, and color
 # it then sets a local var to these items and uses it to make a Theme var
 # The theme var is stored in an array and a dictionary
-for name in data["themes"]:
+for name in c.data["themes"]:
     loc_vars = locals()
-    for att in Theme.attributes:
+    for att in theme.Theme.attributes:
         try:
-            loc_vars.__setitem__(att,data["themes"][name][att])
+            loc_vars.__setitem__(att,c.data["themes"][name][att])
         except (KeyError, TypeError):
             loc_vars.__setitem__(att,None)
 
-    t = Theme(name, colorscheme, wallpaper, command, time ) 
+    t = theme.Theme(name, colorscheme, wallpaper, command, time ) 
 
     themes_dic[name] = t
 
 themes = sorted(themes_dic.values(), reverse=True)
+
 
 ###################################
 # IO Functions
@@ -356,7 +39,7 @@ themes = sorted(themes_dic.values(), reverse=True)
 # Creates a new trigger for every theme time
 def write_timer():
 
-    file = open(kshift_timer_loc,"w")
+    file = open(c.kshift_timer_loc,"w")
 
     file.write("\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\n")
 
@@ -380,26 +63,26 @@ def install():
 
     exec_name = os.path.basename(__file__) 
 
-    kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart="+home+"/.local/bin/"+exec_name
+    kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart="+c.home+"/.local/bin/"+exec_name
 
-    print("Copying Kshift to .local/bin...")
-    os.makedirs(home+"/.local/bin/", exist_ok=True)
+    print("Linking Kshift to .local/bin...")
+    os.makedirs(c.home+"/.local/bin/", exist_ok=True)
 
-    os.system("cp "+__file__+" "+home+"/.local/bin/"+exec_name)
+    os.system("ln -s -f "+__file__+" "+c.home+"/.local/bin/"+exec_name)
 
-    var_loc = config_loc
+    var_loc = c.config_loc
     # Make config dir, possibly read config env
-    if not os.path.exists(config_loc_base):
-        os.makedirs(config_loc_base)
+    if not os.path.exists(c.config_loc_base):
+        os.makedirs(c.config_loc_base)
 
     if not os.path.exists(var_loc):
         print("Copying 'defaults.yml' to"+ var_loc+"...")
         os.system("cp defaults.yml "+var_loc)
 
-    os.makedirs(home+"/.config/systemd/user", exist_ok=True)
+    os.makedirs(c.home+"/.config/systemd/user", exist_ok=True)
 
     print("Writing kshift.service and kshift.timer...")
-    file = open(kshift_service_loc, "w")
+    file = open(c.kshift_service_loc, "w")
     file.write(kshift_service)
     file.close()
 
@@ -419,34 +102,10 @@ def remove_self():
     os.system("systemctl --user stop kshift.timer")
     os.system("systemctl --user disable kshift.timer")
 
-    os.remove(kshift_timer_loc)
-    os.remove(kshift_service_loc)
+    os.remove(c.kshift_timer_loc)
+    os.remove(c.kshift_service_loc)
 
     os.system("systemctl --user daemon-reload")
-
-
-###################################
-# Kshift
-###################################
-
-
-# This is where the magic happens
-# Just uses a theme's vars to set the colorscheme and wallpaper
-# This calls write_timer as well, it adds little delay and makes the timer always up to date
-def kshift(theme: Theme):
-
-    if theme.wallpaper:
-        os.system("plasma-apply-wallpaperimage "+ theme.wallpaper)
-
-    if theme.colorscheme and theme.colorscheme != curr_colorscheme():
-        os.system("plasma-apply-colorscheme "+ theme.colorscheme)
-
-    if os.path.exists(kshift_timer_loc):
-        write_timer()
-
-    if theme.command:
-        os.system(theme.command)
-
 
 ###################################
 # Arg parsing
@@ -456,7 +115,7 @@ parser = argparse.ArgumentParser(description="KDE Theme Switching")
 
 parser.add_argument("-w", "--wallpaper", help="Sets the current wallpaper", type=str, required=False)
 parser.add_argument("-c","--colorscheme", type=str,help="Sets the colorscheme", required=False)
-parser.add_argument("-t", "--theme", help="Sets the theme", type=str, choices=list(data["themes"].keys()), required=False)
+parser.add_argument("-t", "--theme", help="Sets the theme", type=str, choices=list(c.data["themes"].keys()), required=False)
 
 
 # These cannot be called together 
@@ -469,7 +128,9 @@ install_g.add_argument("-s", "--status", help="Displays kshift timing informatio
 args = parser.parse_args()
 
 if args.status:
-    status()
+
+    c.status()
+
 elif args.install:
 
     answer = input("Are you sure you want to install Kshift? [y/n]: ")
@@ -484,12 +145,11 @@ elif args.remove:
 
 else:
 
-    if args.theme or args.wallpaper or args.colorscheme:
-        if args.theme:
-            kshift(themes_dic[args.theme])
+    if args.theme:
+        themes_dic[args.theme].kshift()
 
-        if args.theme or args.wallpaper:
-            kshift(Theme("tmp", args.colorscheme, args.wallpaper, None, None))
+    elif args.colorscheme or args.wallpaper:
+        theme.Theme("tmp", args.colorscheme, args.wallpaper, None, None).kshift()
 
     else:
 
@@ -501,10 +161,12 @@ else:
 
             if theme.time == None:
                 break
-            elif today >= theme.time:
+            elif c.today >= theme.time:
                 theme_to_be = theme
                 break
    
         if theme_to_be:
-            kshift(theme_to_be)
+            theme_to_be.kshift()
+
+    write_timer()
 
