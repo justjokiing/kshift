@@ -31,7 +31,3 @@ def curr_colorscheme():
             break
 
     return curr
-
-
-
-

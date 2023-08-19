@@ -24,11 +24,17 @@ for name in c.data["themes"]:
         except (KeyError, TypeError):
             loc_vars.__setitem__(att,None)
 
-    t = theme.Theme(name, colorscheme, wallpaper, command, time ) 
+    if type(time).__name__ != 'list':
+        time = [time]
 
-    themes_dic[name] = t
+    for ti in time:
+        t = theme.Theme(name, colorscheme, wallpaper, command, ti ) 
 
-themes = sorted(themes_dic.values(), reverse=True)
+        themes_dic[name] = t
+        themes.append(t)
+
+themes = sorted(themes)
+#themes = sorted(themes_dic.values(), reverse=True)
 
 
 ###################################
