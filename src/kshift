@@ -34,33 +34,40 @@ for name in c.data["themes"]:
         themes.append(t)
 
 #themes = sorted(themes)
-themes = sorted(themes_dic.values(), reverse=True)
-
+themes = sorted(themes, reverse=True)
 
 ###################################
 # IO Functions
 ###################################
 
-# Writes the kshift.timer
-# Creates a new trigger for every theme time
+# Writes the timers/services for each timed theme
 def write_timer():
 
-    file = open(c.kshift_timer_loc,"w")
-
-    file.write("\n[Unit]\nDescription=kshift timer\n\n[Timer]\nOnStartupSec=1s\n")
-
     for theme in themes:
+
         if theme.time:
+            file = open(c.systemd_loc+"kshift-"+theme.name+".timer","w")
+            file.write("\n[Unit]\nDescription=kshift timer for theme:"+theme.name+"\n\n[Timer]\n\n")
+
+            # Will need to change to just OnCalendar times
             time = theme.time.strftime("%H:%M")
             file.write("OnCalendar=*-*-* "+time+":00\n")
 
-    file.write("Persistent=true\n\n[Install]\nWantedBy=timers.target")
+            file.write("Persistent=true\n\n[Install]\nWantedBy=timers.target")
+            file.close()
 
-    file.close()
+            file = open(c.systemd_loc+"kshift-"+theme.name+".service","w")
+            exec_name = os.path.basename(__file__)
 
+            file.write("[Unit]\nDescription=kshift service\n\n[Service]\nExecStart="+c.home+"/.local/bin/"+exec_name+" -t "+theme.name)
+            file.close()
 
     os.system("systemctl --user daemon-reload")
-    os.system("systemctl --user restart kshift.timer")
+
+    for theme in themes:
+        if theme.time:
+            os.system("systemctl --user enable kshift-"+theme.name+".timer")
+            os.system("systemctl --user restart kshift-"+theme.name+".timer")
 
 
 # Installs kshift
@@ -68,8 +75,6 @@ def write_timer():
 def install():
 
     exec_name = os.path.basename(__file__) 
-
-    kshift_service="[Unit]\nDescription=kshift service\n\n[Service]\nExecStart="+c.home+"/.local/bin/"+exec_name
 
     print("Linking Kshift to .local/bin...")
     os.makedirs(c.home+"/.local/bin/", exist_ok=True)
@@ -85,31 +90,21 @@ def install():
         print("Copying 'defaults.yml' to"+ var_loc+"...")
         os.system("cp defaults.yml "+var_loc)
 
-    os.makedirs(c.home+"/.config/systemd/user", exist_ok=True)
+    os.makedirs(c.systemd_loc, exist_ok=True)
 
-    print("Writing kshift.service and kshift.timer...")
-    file = open(c.kshift_service_loc, "w")
-    file.write(kshift_service)
-    file.close()
+    print("Writing theme timers and services...")
 
     write_timer()
 
-    print("Enabling kshift.timer...")
-    os.system("systemctl --user daemon-reload")
-    os.system("systemctl --user enable kshift.timer")
-    os.system("systemctl --user start kshift.timer")
+    print("Enabling services...")
 
 
 # Removes Kshift timer
 def remove_self():
 
-    print("Removing kshift.timer and service...")
+    print("Removing kshift timers and services...")
 
-    os.system("systemctl --user stop kshift.timer")
-    os.system("systemctl --user disable kshift.timer")
-
-    os.remove(c.kshift_timer_loc)
-    os.remove(c.kshift_service_loc)
+    os.system("rm "+c.systemd_loc+"kshift-*")
 
     os.system("systemctl --user daemon-reload")
 

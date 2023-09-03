@@ -46,7 +46,7 @@ class Theme:
             self.time = c.today.replace(hour=tmp_time.hour, minute=tmp_time.minute)
 
     def __eq__(self, __o: object) -> bool:
-        return isinstance(__o,Theme) and self.time == __o.time
+        return isinstance(__o,Theme) and self.name == __o.name and self.time == __o.time
 
     def __ge__(self, __o) -> bool:
         if isinstance(__o,Theme) and __o.time != None and self.time != None:

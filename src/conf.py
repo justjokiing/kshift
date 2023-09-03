@@ -43,8 +43,7 @@ class config:
         else:
             home = '/home/'+user
 
-    kshift_timer_loc= home+"/.config/systemd/user/kshift.timer"
-    kshift_service_loc= home+"/.config/systemd/user/kshift.service"
+    systemd_loc = home+"/.config/systemd/user/"
 
     def __init__(self):
 
@@ -123,24 +122,40 @@ class config:
 
     # Prints the status of Kshift, the timer, and the current config file
     def status(self):
-        if os.path.exists(self.kshift_timer_loc) and os.path.exists(self.config_loc):
-            timer_status_cmd = "systemctl --user is-enabled kshift.timer"
-            timer_status = subprocess.run(timer_status_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
+        if os.path.exists(self.systemd_loc) and os.path.exists(self.config_loc):
 
             print("##################################")
 
-            if timer_status == "enabled":
+            timer_status_cmd = "systemctl --user is-enabled "
+            enabled = False
+            timed_outputs = ""
+
+            for f in os.listdir(self.systemd_loc):
+                if 'kshift-' in f and '.timer' in f:
+                    timer_status = subprocess.run(
+                        (timer_status_cmd + f).split(), 
+                        stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
+
+
+                    if timer_status == "enabled":
+                        if not enabled:
+                            enabled = True
+
+                        theme_name = f.replace(".timer","").split("-")[1]
+
+                        timer = open(self.systemd_loc+f, "r")
+                        for line in timer:
+                            #m = re.search("[0-9]{1,2}:[0-9]{2}:[0-9]{2}", line)
+                            m = re.search("OnCalendar=(.*)", line)
+                            if m:
+                                time = m.group(1)
+                                timed_outputs += theme_name.center(10)+" @ "+time+"\n"
+
+                        timer.close()
+
+            if enabled:
                 print("Kshift "+colorama.Fore.GREEN + "ENABLED"+colorama.Fore.WHITE +":")
-                timer = open(self.kshift_timer_loc, "r")
-                for line in timer:
-                    m = re.search("[0-9]{1,2}:[0-9]{2}:[0-9]{2}", line)
-                    if m:
-                        time = m.group(0)
-                        print("    Kshift at "+time)
-
-                timer.close()
-
-                print()
+                print(timed_outputs)
             else:
                 print("Kshift "+ colorama.Fore.RED+ "DISABLED."+ colorama.Fore.WHITE)
 
