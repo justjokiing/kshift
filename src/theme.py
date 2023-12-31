@@ -12,11 +12,12 @@ c = conf.config()
 
 @total_ordering
 class Theme:
-    attributes = ["colorscheme", "wallpaper", "command", "time"]
+    attributes = ["colorscheme", "icontheme", "wallpaper", "command", "time"]
 
     colorschemes = utils.get_colorschemes()
+    iconthemes = utils.get_iconthemes()
 
-    def __init__(self, name, colorscheme, wallpaper, command, time):
+    def __init__(self, name, colorscheme, icontheme, wallpaper, command, time):
         self.name = name
 
         if colorscheme is None or self.colorschemes.count(colorscheme) >= 1:
@@ -24,6 +25,10 @@ class Theme:
         else:
             raise ValueError("Unknown colorscheme: "+colorscheme)
 
+        if icontheme is None or self.iconthemes.count(icontheme) >= 1:
+            self.icontheme = icontheme
+        else:
+            raise ValueError("Unknown icon theme: "+icontheme)
 
         if wallpaper is None or os.path.exists(wallpaper):
             self.wallpaper = wallpaper
@@ -61,7 +66,7 @@ class Theme:
             return False
 
     def __repr__(self) -> str:
-        return "Name: {}, ColorScheme: {}, Wallpaper: {}, Time: {}\n".format(self.name,self.colorscheme,self.wallpaper,self.time)
+        return "Name: {}, ColorScheme: {}, IconTheme: {}, Wallpaper: {}, Time: {}\n".format(self.name,self.colorscheme,self.icontheme,self.wallpaper,self.time)
 
 
     ###################################
@@ -78,6 +83,11 @@ class Theme:
 
         if self.colorscheme and self.colorscheme != utils.curr_colorscheme():
             os.system("plasma-apply-colorscheme "+ self.colorscheme)
+
+        if self.icontheme and self.icontheme != utils.curr_icontheme():
+            plasma_changeicons = utils.find_plasma_changeicons()
+            if (plasma_changeicons is not None):
+                os.system(plasma_changeicons + " " + self.icontheme)
 
         if self.command:
             os.system(self.command)
