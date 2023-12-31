@@ -6,7 +6,7 @@ from functools import total_ordering
 import conf
 import utils
 
-c = conf.config();
+c = conf.config()
 
 # Class used for holding a theme data, and sorting these themes
 
@@ -19,13 +19,13 @@ class Theme:
     def __init__(self, name, colorscheme, wallpaper, command, time):
         self.name = name
 
-        if colorscheme == None or self.colorschemes.count(colorscheme) >= 1:
+        if colorscheme is None or self.colorschemes.count(colorscheme) >= 1:
             self.colorscheme = colorscheme
         else:
             raise ValueError("Unknown colorscheme: "+colorscheme)
 
 
-        if wallpaper == None or os.path.exists(wallpaper):
+        if wallpaper is None or os.path.exists(wallpaper):
             self.wallpaper = wallpaper
         else:
             raise ValueError("Wallpaper does not exist: "+wallpaper)
@@ -39,7 +39,7 @@ class Theme:
             else:
                 tmp_time = datetime.datetime.strptime(c.data[time], "%H:%M")
                 self.time = c.delay_time(c.today.replace(hour=tmp_time.hour, minute=tmp_time.minute), time)
-        elif time == None:
+        elif time is None:
             self.time = None
         else:
             tmp_time = datetime.datetime.strptime(time, "%H:%M")
@@ -49,13 +49,13 @@ class Theme:
         return isinstance(__o,Theme) and self.time == __o.time
 
     def __ge__(self, __o) -> bool:
-        if isinstance(__o,Theme) and __o.time != None and self.time != None:
+        if isinstance(__o,Theme) and __o.time is not None and self.time is not None:
             return self.time > __o.time
         else:
             return False
 
     def __le__(self, __o) -> bool:
-        if isinstance(__o,Theme) and __o.time != None and self.time != None:
+        if isinstance(__o,Theme) and __o.time is not None and self.time is not None:
             return self.time < __o.time
         else:
             return False
@@ -81,4 +81,3 @@ class Theme:
 
         if self.command:
             os.system(self.command)
-
