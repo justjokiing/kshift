@@ -10,7 +10,7 @@ def get_colorschemes():
     output = subprocess.run(colorscheme_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
     for line in output.splitlines():
-        r = re.search(" \* ([A-Za-z]*)", line)
+        r = re.search(" \\* ([A-Za-z]*)", line)
         if r:
             arr.append(r.group(1))
 
@@ -25,7 +25,7 @@ def curr_colorscheme():
     output = subprocess.run(colorscheme_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
     for line in output.splitlines():
-        r = re.search(" \* ([A-Za-z]*) \(current color scheme\)", line)
+        r = re.search(" \\* ([A-Za-z]*) \\(current color scheme\\)", line)
         if r:
             curr = r.group(1)
             break
