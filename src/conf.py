@@ -176,9 +176,6 @@ class config:
     # Returns the correct sunstate
     def web_sundata(self, sunstate):
 
-        global sunrise
-        global sunset
-
         url = "https://weather.com/weather/today/l/" + self.location
         try:
             data = requests.get(url, timeout=self.net_timeout)
@@ -198,13 +195,15 @@ class config:
             file.write(self.location+"\n")
             file.write(sunrise.strftime("%a %b %d %X %Y")+"\n")
             file.write(sunset.strftime("%a %b %d %X %Y"))
+            self.sunrise = sunrise
+            self.sunset  = sunset
         except Exception:
             pass
 
         if sunstate == "sunrise":
-            return sunrise
+            return self.sunrise
         elif sunstate == "sunset":
-            return sunset
+            return self.sunset
         else:
             raise ValueError
 

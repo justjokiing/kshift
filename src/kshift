@@ -47,7 +47,7 @@ def write_timer():
 
         if theme.time:
             file = open(c.systemd_loc+"kshift-"+theme.name+".timer","w")
-            file.write("\n[Unit]\nDescription=kshift timer for theme:"+theme.name+"\n\n[Timer]\n\n")
+            file.write("[Unit]\nDescription=kshift timer for theme:"+theme.name+"\n\n[Timer]\n")
 
             # Will need to change to just OnCalendar times
             time = theme.time.strftime("%H:%M")
