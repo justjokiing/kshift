@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import argparse
 import os
@@ -10,7 +10,7 @@ import theme
 themes = []
 themes_dic = {}
 
-c = conf.config();
+c = conf.config()
 
 # This loop goes through the data from the yaml file
 # it iterates over the attributes for theme, currently colorscheme, wallpaper, and color
@@ -28,7 +28,7 @@ for name in c.data["themes"]:
         time = [time]
 
     for ti in time:
-        t = theme.Theme(name, colorscheme, wallpaper, command, ti ) 
+        t = theme.Theme(name, colorscheme, icontheme, wallpaper, command, ti )
 
         themes_dic[name] = t
         themes.append(t)
@@ -74,7 +74,7 @@ def write_timer():
 # Copies executable, creates config file, utilizes the write timer func, and enables the timer
 def install():
 
-    exec_name = os.path.basename(__file__) 
+    exec_name = os.path.basename(__file__)
 
     print("Linking Kshift to .local/bin...")
     os.makedirs(c.home+"/.local/bin/", exist_ok=True)
@@ -116,10 +116,11 @@ parser = argparse.ArgumentParser(description="KDE Theme Switching")
 
 parser.add_argument("-w", "--wallpaper", help="Sets the current wallpaper", type=str, required=False)
 parser.add_argument("-c","--colorscheme", type=str,help="Sets the colorscheme", required=False)
+parser.add_argument("-i","--icontheme", type=str,help="Sets the icon theme", required=False)
 parser.add_argument("-t", "--theme", help="Sets the theme", type=str, choices=list(c.data["themes"].keys()), required=False)
 
 
-# These cannot be called together 
+# These cannot be called together
 install_g = parser.add_mutually_exclusive_group(required=False)
 install_g.add_argument("--install", help="Installs Kshift", action="store_true")
 install_g.add_argument("--remove", help="Removes Kshift", action="store_true")
@@ -149,8 +150,8 @@ else:
     if args.theme:
         themes_dic[args.theme].kshift()
 
-    elif args.colorscheme or args.wallpaper:
-        theme.Theme("tmp", args.colorscheme, args.wallpaper, None, None).kshift()
+    elif args.colorscheme or args.icontheme or args.wallpaper:
+        theme.Theme("tmp", args.colorscheme, args.icontheme, args.wallpaper, None, None).kshift()
 
     else:
 
@@ -160,14 +161,13 @@ else:
         # if none is greater, then do nothing.
         for theme in themes:
 
-            if theme.time == None:
+            if theme.time is None:
                 break
             elif c.today >= theme.time:
                 theme_to_be = theme
                 break
-   
+
         if theme_to_be:
             theme_to_be.kshift()
 
     write_timer()
-
