@@ -79,7 +79,7 @@ def install():
     print("Linking Kshift to .local/bin...")
     os.makedirs(c.home+"/.local/bin/", exist_ok=True)
 
-    os.system("ln -s -f "+__file__+" "+c.home+"/.local/bin/"+exec_name)
+    os.system("ln -f "+__file__+" "+c.home+"/.local/bin/"+exec_name)
 
     var_loc = c.config_loc
     # Make config dir, possibly read config env

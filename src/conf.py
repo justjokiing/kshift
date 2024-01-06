@@ -51,6 +51,8 @@ class config:
         if self.config_loc_base is None:
             self.config_loc_base = self.home +'/.config'
 
+        self.config_loc_base += '/kshift'
+
 
         self.config_loc = self.config_loc_base + '/kshift.yml'
         if not os.path.exists(self.config_loc):
@@ -71,7 +73,7 @@ class config:
         location_chk = re.search("^[A-Z]{4}[0-9]{4}$", self.location)
         if type(self.location).__name__ != 'str' or not location_chk:
             raise TypeError("'location' variable is not set correctly. Visit https://weather.codes/ for correct codes.")
-        self.tmpfile="/tmp/"+ self.location+ ".out"
+        self.loc_file = self.config_loc_base + "/" + self.location+ ".out"
 
 
         self.sunrise = self.data["sunrise"]
@@ -138,8 +140,7 @@ class config:
 
 
                     if timer_status == "enabled":
-                        if not enabled:
-                            enabled = True
+                        enabled = True
 
                         theme_name = f.replace(".timer","").split("-")[1]
 
@@ -191,10 +192,11 @@ class config:
                     sunset = self.today.replace(hour=sunset.hour, minute=sunset.minute)
 
 
-            file = open(self.tmpfile, "w")
+            file = open(self.loc_file , "w")
             file.write(self.location+"\n")
             file.write(sunrise.strftime("%a %b %d %X %Y")+"\n")
             file.write(sunset.strftime("%a %b %d %X %Y"))
+            file.close()
             self.sunrise = sunrise
             self.sunset  = sunset
         except Exception:
@@ -211,11 +213,8 @@ class config:
     # Returns the correct sunstate
     def get_sundata(self, sunstate):
 
-        global sunrise
-        global sunset
-
-        if os.path.exists(self.tmpfile):
-            tmp = open(self.tmpfile,"r")
+        if os.path.exists(self.loc_file):
+            tmp = open(self.loc_file,"r")
 
             last_location = tmp.readline().strip()
             #'Wed Dec  4 20:30:40 2002'
