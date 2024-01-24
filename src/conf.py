@@ -37,7 +37,7 @@ class config:
     user = os.getlogin()
 
     home = os.getenv('HOME')
-    if home == None:
+    if home is None:
         if user == 'root':
             home = "/root"
         else:
@@ -120,7 +120,7 @@ class config:
         elif sun_pos == "sunset":
             delay = self.set_delay
 
-        return time.replace(hour=time.hour + delay)
+        return time.replace(hour=time.hour + delay).strftime("%H:%M")
 
     # Prints the status of Kshift, the timer, and the current config file
     def status(self):

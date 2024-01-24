@@ -40,28 +40,26 @@ class Theme:
 
         if time == "sunrise" or time == "sunset":
             if c.webdata:
-                self.time = c.delay_time(c.get_sundata(time), time)
+                time = c.delay_time(c.get_sundata(time), time)
             else:
+                # Get default sunrise/sunset time if no webdata
                 tmp_time = datetime.datetime.strptime(c.data[time], "%H:%M")
-                self.time = c.delay_time(c.today.replace(hour=tmp_time.hour, minute=tmp_time.minute), time)
-        elif time is None:
-            self.time = None
-        else:
-            tmp_time = datetime.datetime.strptime(time, "%H:%M")
-            self.time = c.today.replace(hour=tmp_time.hour, minute=tmp_time.minute)
+                time = c.delay_time(c.today.replace(hour=tmp_time.hour, minute=tmp_time.minute), time)
+
+        self.time = utils.time_to_systemd(time)
 
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o,Theme) and self.name == __o.name and self.time == __o.time
 
     def __ge__(self, __o) -> bool:
         if isinstance(__o,Theme) and __o.time is not None and self.time is not None:
-            return self.time > __o.time
+            return utils.systemd_to_datetime(self.time, c.today) > utils.systemd_to_datetime(__o.time, c.today)
         else:
             return False
 
     def __le__(self, __o) -> bool:
         if isinstance(__o,Theme) and __o.time is not None and self.time is not None:
-            return self.time < __o.time
+            return utils.systemd_to_datetime(self.time, c.today) < utils.systemd_to_datetime(__o.time, c.today)
         else:
             return False
 

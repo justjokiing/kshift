@@ -2,7 +2,8 @@
 
  kshift is a KDE theme shifting script that activates at set times to switch themes, including sunrise and sunset. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes, `plasma-changeicons` for icon themes, `plasma-apply-wallpaperimage` for wallpapers, and python `os.system()` for commands.
 
- During installation, kshift sets systemd timers to run the script at any time a theme is set, including sunrise/sunset.
+ During installation, kshift sets systemd timers to run the script at any time a theme is set, including sunrise/sunset. The times set can be the sunrise/sunset keywords or **ANY valid 'OnCalendar' time**. Information on 'OnCalendar' syntax and capability is available in more detail [here](https://man.archlinux.org/man/systemd.time.7#CALENDAR_EVENTS)
+
  The sunrise and sunset times are updated when kshift is ran.
 
 ## Demo
@@ -38,6 +39,7 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
 * KDE Plasma
 * Systemd
 * Python 3
+* Colorama
 
 #### Instructions
 
@@ -61,17 +63,21 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
         icontheme: breeze
         wallpaper: /usr/share/wallpapers/Flow/contents/images/5120x2880.jpg
         command: ''               # Runs command at theme activation
-        time: sunrise             # Keywords 'sunrise', 'sunset', or time in 'HH:MM' format
+        time: sunrise             # Keywords 'sunrise', 'sunset', or ANY correct systemd 'OnCalendar' time
       night:
         colorscheme: BreezeDark
         icontheme: breeze-dark
         wallpaper: /usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg
         command: ''
-        time: sunset
+        time: 
+          - sunset
+      october:
+        wallpaper: /usr/share/wallpapers/FallenLeaf/contents/images/2560x1600.jpg
+        time: '*-10-* *:*:*'
    ```
 	The themes default are set to a set of default day and night KDE themes and wallpapers. You can add as many themes as you would like at many different times, wallpapers, commands, icons, and colorschemes. None of the theme variables are required. If time is not set, there will be no automatic transition.
     
-    The time variables "sunrise" and "sunset" are keywords to kshift and are replaced with the sunrise and sunset times that your location variable sets. __Make sure to use correct YAML syntax.__
+    The time variables "sunrise" and "sunset" are keywords to kshift and are replaced with the sunrise and sunset times that your location variable sets. Each theme's time will be converted to SystemD 'OnCalendar' syntax. __Make sure to use correct YAML syntax.__
 
 
 3. Create the systemd services and add kshift to local bin
@@ -87,4 +93,4 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
     ```
     $ ./kshift --status
     ```
-  Then test out your themes.
+    Then test out your themes.

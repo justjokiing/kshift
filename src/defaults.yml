@@ -11,12 +11,14 @@ themes:
     icontheme: breeze
     wallpaper: /usr/share/wallpapers/Flow/contents/images/5120x2880.jpg
     command: ''               # Runs command at theme activation
-    time:
-      - sunrise             # Keywords 'sunrise', 'sunset', or time in 'HH:MM' format
+    time: sunrise             # Keywords 'sunrise', 'sunset', or ANY correct systemd 'OnCalendar' time
   night:
     colorscheme: BreezeDark
     icontheme: breeze-dark
     wallpaper: /usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg
     command: ''
-    time:
+    time: 
       - sunset
+  october:
+    wallpaper: /usr/share/wallpapers/FallenLeaf/contents/images/2560x1600.jpg
+    time: '*-10-* *:*:*'

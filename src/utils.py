@@ -1,3 +1,4 @@
+from datetime import datetime
 import subprocess
 import re
 import os
@@ -81,3 +82,65 @@ def find_plasma_changeicons():
             return executable_path
 
     return None
+
+def time_to_systemd(time):
+
+    if time is None:
+        return time
+
+    command = "systemd-analyze calendar "+time
+    process = subprocess.run(command.split(), stdout=subprocess.PIPE)
+    stat_code = process.returncode
+
+    if stat_code == 0:
+        calendar_time = ""
+        output = process.stdout.decode('utf-8').strip()
+
+        for line in output.splitlines():
+            r = re.search("Normalized form: (.*)", line)
+            if r:
+                calendar_time = r.group(1)
+                break
+
+        return calendar_time
+
+    else:
+        raise Exception("Invalid SystemD calendar time!: "+time )
+
+
+# Converting to today's version of datetime for theme comparison
+def systemd_to_datetime(time, today: datetime) -> datetime:
+
+    if time is None or type(time).__name__ == "datetime":
+        return time
+
+    parts = time.split()
+
+    # Y-M-D HH:MM:SS
+    # OR
+    # DOW Y-M-D HH:MM:SS
+
+    if len(parts) == 3:
+        dow = parts[0]
+        time = " ".join(parts[1:])
+
+    r = re.search("(.*)-(.*)-(.*) (.*):(.*):(.*)", time)
+
+    today_broken = [ today.year, today.month, today.day, today.hour, today.minute, today.second ]
+    final = []
+
+    for i in range(6):
+        final.append( r.group(i+1) if r.group(i+1) != '*' else today_broken[i] )
+
+    if len(parts) == 3:
+        new_time = "{} {}-{}-{} {}:{}:{}".format(dow, *final)
+
+        date = datetime.strptime(new_time, "%a %Y-%m-%d %H:%M:%S")
+    else:
+        new_time = "{}-{}-{} {}:{}:{}".format(*final)
+
+        date = datetime.strptime(new_time, "%Y-%m-%d %H:%M:%S")
+
+    return date
+
+
