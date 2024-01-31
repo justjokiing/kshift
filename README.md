@@ -88,7 +88,7 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
 
     kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be updated after each execution. 
 
-    kshift variables will then be located at `~/.config/kshift/.kshift.yml` and follows the same format of `defaults.yml`, any further variable can be done by editing that file or using the `--install` option.
+    kshift variables will then be located at `~/.config/kshift/kshift.yml` and follows the same format of `defaults.yml`, any further variable can be done by editing that file or using the `--install` option.
 
 4. Now check to see if the system timers are on and working.
     ```
