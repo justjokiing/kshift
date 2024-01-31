@@ -12,12 +12,12 @@ c = conf.config()
 
 @total_ordering
 class Theme:
-    attributes = ["colorscheme", "icontheme", "wallpaper", "command", "time"]
+    attributes = ["colorscheme", "icontheme", "wallpaper", "command", "time", "enabled"]
 
     colorschemes = utils.get_colorschemes()
     iconthemes = utils.get_iconthemes()
 
-    def __init__(self, name, colorscheme, icontheme, wallpaper, command, time):
+    def __init__(self, name, colorscheme, icontheme, wallpaper, command, time, enabled):
         self.name = name
 
         if colorscheme is None or self.colorschemes.count(colorscheme) >= 1:
@@ -37,7 +37,6 @@ class Theme:
 
         self.command = command
 
-
         if time == "sunrise" or time == "sunset":
             if c.webdata:
                 time = c.delay_time(c.get_sundata(time), time)
@@ -45,6 +44,11 @@ class Theme:
                 # Get default sunrise/sunset time if no webdata
                 tmp_time = datetime.datetime.strptime(c.data[time], "%H:%M")
                 time = c.delay_time(c.today.replace(hour=tmp_time.hour, minute=tmp_time.minute), time)
+
+        # A disabled theme just gets no time
+        # allows you to still call it
+        if enabled is False:
+            time = None
 
         self.time = utils.time_to_systemd(time)
 

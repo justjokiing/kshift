@@ -74,8 +74,9 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
       october:
         wallpaper: /usr/share/wallpapers/FallenLeaf/contents/images/2560x1600.jpg
         time: '*-10-* *:*:*'
+        enabled: false            # Disables theme, it will not run on time
    ```
-	The themes default are set to a set of default day and night KDE themes and wallpapers. You can add as many themes as you would like at many different times, wallpapers, commands, icons, and colorschemes. None of the theme variables are required. If time is not set, there will be no automatic transition.
+	The themes default are set to a set of default day and night KDE themes and wallpapers. You can add as many themes as you would like at many different times, wallpapers, commands, icons, and colorschemes. None of the theme variables are required. If time is not set, there will be no automatic transition. The default for 'enabled' is true.
     
     The time variables "sunrise" and "sunset" are keywords to kshift and are replaced with the sunrise and sunset times that your location variable sets. Each theme's time will be converted to SystemD 'OnCalendar' syntax. __Make sure to use correct YAML syntax.__
 
@@ -87,7 +88,7 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
 
     kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be updated after each execution. 
 
-    kshift variables will then be located at `~/.kshift.yml` and follows the same format of `defaults.yml`, any further variable can be done by editing that file or using the `--install` option.
+    kshift variables will then be located at `~/.config/kshift/.kshift.yml` and follows the same format of `defaults.yml`, any further variable can be done by editing that file or using the `--install` option.
 
 4. Now check to see if the system timers are on and working.
     ```

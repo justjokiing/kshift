@@ -22,3 +22,4 @@ themes:
   october:
     wallpaper: /usr/share/wallpapers/FallenLeaf/contents/images/2560x1600.jpg
     time: '*-10-* *:*:*'
+    enable: false             # Disables theme, it will not run on time
