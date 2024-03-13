@@ -185,8 +185,8 @@ class config:
                 re_sun = re.search("SunriseSunset", line)
                 times = re.findall("((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))", line)
                 if re_sun and times:
-                    sunrise = datetime.datetime.strptime(times[0][0], "%I:%M %p")
-                    sunset = datetime.datetime.strptime(times[1][0], "%I:%M %p")
+                    sunrise = datetime.datetime.strptime(times[1][0], "%I:%M %p")
+                    sunset = datetime.datetime.strptime(times[2][0], "%I:%M %p")
 
                     sunrise = self.today.replace(hour=sunrise.hour, minute=sunrise.minute)
                     sunset = self.today.replace(hour=sunset.hour, minute=sunset.minute)
