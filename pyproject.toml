@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kshift"
+version = "1.0.0"
+authors = [
+  { name="Seth Mackert", email="seth.mackert@fastsycamore.com" },
+]
+description = "KDE Theme Shift"
+license = "GPL-3.0-or-later"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Dependent",
+]
+keywords = ["KDE", "theme", "script"]
+
+[project.urls]
+"Homepage" = "https://github.com/justjokiing/kshift"
