@@ -1,0 +1,6 @@
+[Unit]
+Description=$description
+
+[Service]
+WorkingDirectory=$working_dir
+ExecStart=$command

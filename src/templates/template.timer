@@ -1,0 +1,9 @@
+[Unit]
+Description=$description
+$unit_options
+
+[Timer]
+$timer_action
+
+[Install]
+WantedBy=timers.target

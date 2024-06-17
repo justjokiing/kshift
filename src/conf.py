@@ -43,7 +43,8 @@ class config:
         else:
             home = '/home/'+user
 
-    systemd_loc = home+"/.config/systemd/user/"
+    # systemd_loc = home+"/.config/systemd/user/"
+    systemd_loc = home+"/.local/share/systemd/user/"
 
     def __init__(self):
 
