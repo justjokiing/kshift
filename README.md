@@ -1,8 +1,8 @@
 # kshift - KDE Theme Shift
 
- kshift is a KDE theme shifting script that activates at set times to switch themes, including sunrise and sunset. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes, `plasma-changeicons` for icon themes, `plasma-apply-wallpaperimage` for wallpapers, and python `os.system()` for commands.
+ kshift is a KDE theme shifting script that activates at set times to switch desktop themes, the wallpaper, icons, colorscheme, and custom commands. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes, `plasma-changeicons` for icon themes, `plasma-apply-wallpaperimage` for wallpapers, and python `os.system()` for commands.
 
- During installation, kshift sets systemd timers to run the script at any time a theme is set, including sunrise/sunset. The times set can be the sunrise/sunset keywords or **ANY valid 'OnCalendar' time**. Information on 'OnCalendar' syntax and capability is available in more detail [here](https://man.archlinux.org/man/systemd.time.7#CALENDAR_EVENTS)
+ During installation, kshift sets systemd timers to run the script at any time a theme is set, or sunrise/sunset. The times set can be the sunrise/sunset keywords or **ANY valid 'OnCalendar' time**. Information on 'OnCalendar' syntax and capability is available in more detail [here](https://man.archlinux.org/man/systemd.time.7#CALENDAR_EVENTS)
 
  The sunrise and sunset times are updated when kshift is ran.
 
@@ -39,14 +39,15 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
 * KDE Plasma
 * Systemd
 * Python 3
-* Colorama
+* Pip
 
 #### Instructions
 
-1. Clone and enter kshift
+1. Install colorama, then clone and enter kshift
     ```
-    $ git clone https://github.com/justjokiing/kshift
-    $ cd kshift/src
+    pip install colorama
+    git clone https://github.com/justjokiing/kshift
+    cd kshift/src
     ```
 2. Edit the default variables in the variable file `defaults.yml` or look at usage for command line arguments    
    ```
@@ -83,7 +84,7 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
 
 3. Create the systemd services and add kshift to local bin
     ```
-    $ ./kshift --install
+    ./kshift --install
     ```
 
     kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be updated after each execution. 
@@ -92,6 +93,6 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
 
 4. Now check to see if the system timers are on and working.
     ```
-    $ ./kshift --status
+    ./kshift --status
     ```
     Then test out your themes.
