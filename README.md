@@ -1,4 +1,4 @@
-# kshift - KDE Theme Shift
+# [kshift](https://github.com/justjokiing/kshift) - KDE Theme Shift
 
  kshift is a KDE theme shifting script that activates at set times to switch desktop themes, the wallpaper, icons, colorscheme, and custom commands. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes, `plasma-changeicons` for icon themes, `plasma-apply-wallpaperimage` for wallpapers, and python `os.system()` for commands.
 
