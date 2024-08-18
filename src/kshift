@@ -57,7 +57,7 @@ def write_timer():
         if theme.time:
             # write theme timer
             file = open(c.systemd_loc+"kshift-"+theme.name+".timer","w")
-            template = Template(open("templates/template.timer").read());
+            template = Template(open(f'{c.config_loc_base}/templates/template.timer').read());
 
             description = f'Kshift timer for theme {theme.name}'
             after = f'After={theme_service_str}'
@@ -70,7 +70,7 @@ def write_timer():
 
             # write theme service
             file = open(c.systemd_loc+"kshift-"+theme.name+".service","w")
-            template = Template(open("templates/template.service").read());
+            template = Template(open(f'{c.config_loc_base}/templates/template.service').read());
 
             exec_name = os.path.basename(__file__)
 
@@ -86,7 +86,7 @@ def write_timer():
     # write startup timer
     file = open(c.systemd_loc+"kshift-startup.timer","w")
 
-    template = Template(open("templates/template.timer").read());
+    template = Template(open(f'{c.config_loc_base}/templates/template.timer').read());
 
     description = f'Kshift startup timer'
     timer_action = f'OnStartupSec=5'
@@ -101,7 +101,7 @@ def write_timer():
 
     # write startup service
     file = open(c.systemd_loc+"kshift-startup.service","w")
-    template = Template(open("templates/template.service").read());
+    template = Template(open(f'{c.config_loc_base}/templates/template.service').read());
 
     exec_name = os.path.basename(__file__)
 
