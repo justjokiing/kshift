@@ -1,10 +1,6 @@
 # [kshift](https://github.com/justjokiing/kshift) - KDE Theme Shift
 
- kshift is a KDE theme shifting script that activates at set times to switch desktop themes, the wallpaper, icons, colorscheme, and custom commands. When run manually, it sets the color theme and/or wallpaper to the 'correct' value based on current time. It uses `plasma-apply-colorscheme` for color themes, `plasma-changeicons` for icon themes, `plasma-apply-wallpaperimage` for wallpapers, and python `os.system()` for commands.
-
- During installation, kshift sets systemd timers to run the script at any time a theme is set, or sunrise/sunset. The times set can be the sunrise/sunset keywords or **ANY valid 'OnCalendar' time**. Information on 'OnCalendar' syntax and capability is available in more detail [here](https://man.archlinux.org/man/systemd.time.7#CALENDAR_EVENTS)
-
- The sunrise and sunset times are updated when kshift is ran.
+`kshift` is a theme shifting program that integrates with the KDE Plasma desktop environment. The 'theme' includes wallpapers, icon themes, colorschemes, and custom commands. These themes can be run manually by `kshift -t <theme_name>` or by a set time in the `kshift` configuration file. If there is a theme time set, the theme will run automatically through the use of `systemd` timers. Theme times use the same calendar event syntax as systemd timers, but also includes the custom times of `sunrise` and `sunset`. The sunrise and sunset times are determined by the [sunrisesunset.io](https://sunrisesunset.io/) API.
 
 ## Demo
 
@@ -27,7 +23,7 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
                             Sets the colorscheme
       -i ICONTHEME, --icontheme ICONTHEME
                             Sets the icon theme
-      -t {day,night}, --theme {day,night}
+      -t {<theme1>,<theme2>}, --theme {<theme1>,<theme2>}
                             Sets the theme
       --install             Installs Kshift
       --remove              Removes Kshift
@@ -80,9 +76,11 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
         time: '*-10-* *:*:*'
         enabled: false            # Disables theme, it will not run on time
    ```
-	The themes default are set to a set of default day and night KDE themes and wallpapers. You can add as many themes as you would like at many different times, wallpapers, commands, icons, and colorschemes. None of the theme variables are required. If time is not set, there will be no automatic transition. The default for 'enabled' is true.
+	The themes default are set to a set of default day and night KDE themes and wallpapers. You can add as many themes as you would like at many different times, wallpapers, commands, icons, and colorschemes. None of the theme variables are required. If time is not set, there will be no automatic transition. Each theme's time will be converted to SystemD 'OnCalendar' syntax. The default for 'enabled' is true.
     
-    The time variables "sunrise" and "sunset" are keywords to kshift and are replaced with the sunrise and sunset times that your location variable sets. Each theme's time will be converted to SystemD 'OnCalendar' syntax. __Make sure to use correct YAML syntax.__
+    The time variables "sunrise" and "sunset" are keywords to kshift and are replaced with the sunrise and sunset times that your `sun_api` variable sets. Find your api link by going to [sunrisesunset.io](https://sunrisesunset.io/), find your city, then scroll to the bottom to where it says 'JSON API'.
+
+   Make sure to use correct YAML.
 
 
 3. Create the systemd services and add kshift to local bin
