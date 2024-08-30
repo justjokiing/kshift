@@ -1,13 +1,14 @@
-import datetime
+from datetime import datetime
 import os
 import yaml
 import re
 import colorama
 import subprocess
 import requests
+import json
 
 defaults = {
-    "location": "USNY0996",
+    "sun_api": 'https://api.sunrisesunset.io/json?lat=38.907192&lng=-77.036873',
     "sunrise":"08:00",
     "sunset":"19:00",
     "rise_delay": 0,
@@ -32,7 +33,7 @@ class config:
 
     data = {}
 
-    today = datetime.datetime.today().replace(second=0,microsecond=0)
+    today = datetime.today().replace(second=0,microsecond=0)
 
     user = os.getlogin()
 
@@ -41,16 +42,15 @@ class config:
         if user == 'root':
             home = "/root"
         else:
-            home = '/home/'+user
+            home = f"/home/{user}"
 
-    # systemd_loc = home+"/.config/systemd/user/"
-    systemd_loc = home+"/.local/share/systemd/user/"
+    systemd_loc = f"{home}/.local/share/systemd/user/"
 
     def __init__(self):
 
         self.config_loc_base = os.getenv("XDG_CONFIG_HOME")
         if self.config_loc_base is None:
-            self.config_loc_base = self.home +'/.config'
+            self.config_loc_base = f"{self.home}/.config"
 
         self.config_loc_base += '/kshift'
 
@@ -58,7 +58,7 @@ class config:
         self.config_loc = self.config_loc_base + '/kshift.yml'
         if not os.path.exists(self.config_loc):
             self.data = defaults
-            print("No config at: " + self.config_loc+".\nTo change Kshift options, edit 'defaults.yml' and run again with '--install'")
+            print("No config at: {self.config_loc}.\nTo change Kshift options, edit 'defaults.yml' and run again with '--install'")
         else:
             config = open(self.config_loc,"r")
             config_data = yaml.safe_load(config)
@@ -69,13 +69,15 @@ class config:
                 except KeyError:
                     self.data[key] = defaults[key]
 
+        self.sun_api = self.data["sun_api"]
+        api_chk = re.search(r"https://api.sunrisesunset.io/json\?lat=([-]?[0-9.]+)&lng=([-]?[0-9.]+).*", self.sun_api)
+        if type(self.sun_api).__name__ != 'str' or api_chk is None:
+            raise TypeError("'sun_api' variable is not set correctly.")
 
-        self.location = self.data["location"]
-        location_chk = re.search("^[A-Z]{4}[0-9]{4}$", self.location)
-        if type(self.location).__name__ != 'str' or not location_chk:
-            raise TypeError("'location' variable is not set correctly. Visit https://weather.codes/ for correct codes.")
-        self.loc_file = self.config_loc_base + "/" + self.location+ ".out"
+        self.lat = api_chk.group(1)
+        self.lng = api_chk.group(2)
 
+        self.api_file = f"{self.config_loc_base}/{self.lat}{self.lng}.out"
 
         self.sunrise = self.data["sunrise"]
         self.sunset = self.data["sunset"]
@@ -84,14 +86,14 @@ class config:
         if type(self.sunrise).__name__ != 'str' or not sunrise_chk:
             raise TypeError("'sunrise' variable not set correctly. Use the format HH:MM")
         else:
-            sunrise_tmp = datetime.datetime.strptime(self.sunrise, "%H:%M")
+            sunrise_tmp = datetime.strptime(self.sunrise, "%H:%M")
             self.sunrise = self.today.replace(hour= sunrise_tmp.hour, minute=sunrise_tmp.minute)
 
         sunset_chk = re.search("^[0-1]?[0-9]:[0-5][0-9]$", self.sunset)
         if type(self.sunset).__name__ != 'str' or not sunset_chk:
             raise TypeError("'sunset' variable not set correctly. Use the format HH:MM")
         else:
-            sunset_tmp = datetime.datetime.strptime(self.sunset, "%H:%M")
+            sunset_tmp = datetime.strptime(self.sunset, "%H:%M")
             self.sunset = self.today.replace(hour= sunset_tmp.hour, minute=sunset_tmp.minute)
 
 
@@ -114,7 +116,7 @@ class config:
             raise TypeError("'webdata' variable was not set correctly. Use a boolean value")
 
     # Adds delay to any times that are "sunset" or "sunrise"
-    def delay_time(self, time:datetime.datetime, sun_pos):
+    def delay_time(self, time:datetime, sun_pos):
         delay = 0
         if sun_pos == "sunrise":
             delay = self.rise_delay
@@ -147,7 +149,6 @@ class config:
 
                         timer = open(self.systemd_loc+f, "r")
                         for line in timer:
-                            #m = re.search("[0-9]{1,2}:[0-9]{2}:[0-9]{2}", line)
                             m = re.search("OnCalendar=(.*)", line)
                             if m:
                                 time = m.group(1)
@@ -163,7 +164,7 @@ class config:
 
 
             print("##################################")
-            print("kshift local variables @" + self.config_loc)
+            print(f"kshift local variables @{self.config_loc}")
             print("##################################")
 
             for line in open(self.config_loc):
@@ -178,26 +179,24 @@ class config:
     # Returns the correct sunstate
     def web_sundata(self, sunstate):
 
-        url = "https://weather.com/weather/today/l/" + self.location
+        url = self.sun_api
         try:
             data = requests.get(url, timeout=self.net_timeout)
-            data = data.text.splitlines()
-            for line in data:
-                re_sun = re.search("SunriseSunset", line)
-                times = re.findall("((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))", line)
-                if re_sun and times:
-                    sunrise = datetime.datetime.strptime(times[1][0], "%I:%M %p")
-                    sunset = datetime.datetime.strptime(times[2][0], "%I:%M %p")
+            data = json.loads(data.text)
 
-                    sunrise = self.today.replace(hour=sunrise.hour, minute=sunrise.minute)
-                    sunset = self.today.replace(hour=sunset.hour, minute=sunset.minute)
+            sunrise = datetime.strptime(data["results"]["sunrise"], "%I:%M:%S %p")
+            sunset = datetime.strptime(data["results"]["sunset"], "%I:%M:%S %p")
+
+            sunrise = self.today.replace(hour=sunrise.hour, minute=sunrise.minute)
+            sunset = self.today.replace(hour=sunset.hour, minute=sunset.minute)
 
 
-            file = open(self.loc_file , "w")
-            file.write(self.location+"\n")
+            file = open(self.api_file , "w")
+            file.write(f"{self.lat},{self.lng}\n")
             file.write(sunrise.strftime("%a %b %d %X %Y")+"\n")
             file.write(sunset.strftime("%a %b %d %X %Y"))
             file.close()
+
             self.sunrise = sunrise
             self.sunset  = sunset
         except Exception:
@@ -214,18 +213,18 @@ class config:
     # Returns the correct sunstate
     def get_sundata(self, sunstate):
 
-        if os.path.exists(self.loc_file):
-            tmp = open(self.loc_file,"r")
+        if os.path.exists(self.api_file):
+            tmp = open(self.api_file,"r")
 
             last_location = tmp.readline().strip()
             #'Wed Dec  4 20:30:40 2002'
-            sunrise_tmp = datetime.datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
-            sunset_tmp = datetime.datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
+            sunrise_tmp = datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
+            sunset_tmp = datetime.strptime(tmp.readline().strip(),"%a %b %d %X %Y")
 
             tmp.close()
 
             time_distance = self.today - sunrise_tmp
-            if time_distance.days >= 1 or last_location != self.location:
+            if time_distance.days >= 1 or last_location != f"{self.lat},{self.lng}":
                 return self.web_sundata(sunstate)
             else:
                 sunrise = sunrise_tmp

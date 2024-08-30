@@ -1,4 +1,8 @@
-location: USNY0996 # Location Code from https://weather.codes/search
+# API for getting sun data
+# find yours @ https://sunrisesunset.io/
+# scroll to the bottom of the page, find JSON API link
+sun_api: 'https://api.sunrisesunset.io/json?lat=38.907192&lng=-77.036873'
+
 sunrise: '07:00'   # Default sunrise time, when time data cannot be accessed. These must be in quotes.
 sunset: '19:00'    # Default sunset  time
 rise_delay: 0      # Hour delay for sunrise, can be negative

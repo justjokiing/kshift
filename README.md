@@ -51,7 +51,10 @@ https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bd
     ```
 2. Edit the default variables in the variable file `defaults.yml` or look at usage for command line arguments    
    ```
-    location: USNY0996 # Location Code from https://weather.codes/search
+    # API for getting sun data
+    # find yours @ https://sunrisesunset.io/
+    # scroll to the bottom of the page, find JSON API link
+    sun_api: 'https://api.sunrisesunset.io/json?lat=38.907192&lng=-77.036873'
     sunrise: '07:00'   # Default sunrise time, when time data cannot be accessed. These must be in quotes.
     sunset: '19:00'    # Default sunset  time
     rise_delay: 0      # Hour delay for sunrise, can be negative

@@ -23,17 +23,17 @@ class Theme:
         if colorscheme is None or self.colorschemes.count(colorscheme) >= 1:
             self.colorscheme = colorscheme
         else:
-            raise ValueError("Unknown colorscheme: "+colorscheme)
+            raise ValueError(f"Unknown colorscheme: {colorscheme}")
 
         if icontheme is None or self.iconthemes.count(icontheme) >= 1:
             self.icontheme = icontheme
         else:
-            raise ValueError("Unknown icon theme: "+icontheme)
+            raise ValueError(f"Unknown icon theme: {icontheme}")
 
         if wallpaper is None or os.path.exists(wallpaper):
             self.wallpaper = wallpaper
         else:
-            raise ValueError("Wallpaper does not exist: "+wallpaper)
+            raise ValueError(f"Wallpaper does not exist: {wallpaper}")
 
         self.command = command
 
@@ -68,7 +68,7 @@ class Theme:
             return False
 
     def __repr__(self) -> str:
-        return "Name: {}, ColorScheme: {}, IconTheme: {}, Wallpaper: {}, Time: {}\n".format(self.name,self.colorscheme,self.icontheme,self.wallpaper,self.time)
+        return f"Name: {self.name}, ColorScheme: {self.colorscheme}, IconTheme: {self.icontheme}, Wallpaper: {self.wallpaper}, Time: {self.time}\n"
 
 
     ###################################
@@ -81,15 +81,15 @@ class Theme:
     def kshift(self):
 
         if self.wallpaper:
-            os.system("plasma-apply-wallpaperimage "+ self.wallpaper)
+            os.system(f"plasma-apply-wallpaperimage {self.wallpaper}")
 
         if self.colorscheme and self.colorscheme != utils.curr_colorscheme():
-            os.system("plasma-apply-colorscheme "+ self.colorscheme)
+            os.system(f"plasma-apply-colorscheme {self.colorscheme}")
 
         if self.icontheme and self.icontheme != utils.curr_icontheme():
             plasma_changeicons = utils.find_plasma_changeicons()
             if (plasma_changeicons is not None):
-                os.system(plasma_changeicons + " " + self.icontheme)
+                os.system(f"{plasma_changeicons} {self.icontheme}")
 
         if self.command:
             os.system(self.command)

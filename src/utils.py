@@ -40,8 +40,8 @@ def get_iconthemes():
     arr = []
 
     home_dir = os.path.expanduser("~")
-    old_icon_dir = home_dir + "/.icons"
-    icon_dir = home_dir + "/.local/share/icons"
+    old_icon_dir = f"{home_dir}/.icons"
+    icon_dir = f"{home_dir}/.local/share/icons"
     system_icon_dir = "/usr/share/icons"
 
     for path in [old_icon_dir, icon_dir, system_icon_dir]:
@@ -55,7 +55,7 @@ def get_iconthemes():
 def curr_icontheme():
 
     curr = ""
-    kdeconfig_path = os.path.expanduser("~") + "/.config/kdeglobals"
+    kdeconfig_path = f"{os.path.expanduser("~")}/.config/kdeglobals"
 
     if os.path.exists(kdeconfig_path):
         config = configparser.ConfigParser()
@@ -121,10 +121,10 @@ def systemd_to_datetime(time, today: datetime) -> datetime:
     # DOW Y-M-D HH:MM:SS
 
     if len(parts) == 3:
-        dow = parts[0]
         time = " ".join(parts[1:])
 
     r = re.search("(.*)-(.*)-(.*) (.*):(.*):(.*)", time)
+    if r is None: raise Exception("Bad systemd time format")
 
     today_broken = [ today.year, today.month, today.day, today.hour, today.minute, today.second ]
     final = []
@@ -133,6 +133,7 @@ def systemd_to_datetime(time, today: datetime) -> datetime:
         final.append( r.group(i+1) if r.group(i+1) != '*' else today_broken[i] )
 
     if len(parts) == 3:
+        dow = parts[0]
         new_time = "{} {}-{}-{} {}:{}:{}".format(dow, *final)
 
         date = datetime.strptime(new_time, "%a %Y-%m-%d %H:%M:%S")

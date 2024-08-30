@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import argparse
-import os
+from os import path,system,makedirs 
+from re import search
 
 import conf
 import theme
@@ -45,18 +46,29 @@ themes = sorted(themes, reverse=True)
 # Writes the timers/services for each timed theme
 def write_timer():
 
-    os.system(f'rm -f {c.systemd_loc}kshift*')
+    active_theme_list = []
 
-    active_theme_list = [ theme for theme in themes if theme.time ]
-
+    for theme in themes:
+        if theme.time:
+            active_theme_list.append(theme)
+        else:
+            system(f"rm -f {c.systemd_loc}kshift-{theme.name}*")
 
     for theme in active_theme_list:
 
         theme_service_str =" ".join([f'kshift-{x.name}.service' for x in active_theme_list if x.name is not theme.name ]) 
 
-        if theme.time:
-            # write theme timer
-            file = open(c.systemd_loc+"kshift-"+theme.name+".timer","w")
+        # write theme timer
+        old_theme_time = ""
+        if path.exists(f"{c.systemd_loc}kshift-{theme.name}.timer"):
+            file = open(f"{c.systemd_loc}kshift-{theme.name}.timer","r")
+            r = search("OnCalendar=(.*)\n", file.read())
+            if r:
+                old_theme_time = r.group(1)
+            file.close()
+
+        if old_theme_time != theme.time:
+            file = open(f"{c.systemd_loc}kshift-{theme.name}.timer","w")
             template = Template(open(f'{c.config_loc_base}/templates/template.timer').read());
 
             description = f'Kshift timer for theme {theme.name}'
@@ -72,7 +84,7 @@ def write_timer():
             file = open(c.systemd_loc+"kshift-"+theme.name+".service","w")
             template = Template(open(f'{c.config_loc_base}/templates/template.service').read());
 
-            exec_name = os.path.basename(__file__)
+            exec_name = path.basename(__file__)
 
             description = f'Kshift service for theme {theme.name}'
             command = f'{c.home}/.local/bin/{exec_name} -t {theme.name}'
@@ -82,70 +94,67 @@ def write_timer():
             file.write(template.substitute(subs))
             file.close()
 
+        system("systemctl --user enable kshift-"+theme.name+".timer")
+        system("systemctl --user restart kshift-"+theme.name+".timer")
+
 
     # write startup timer
-    file = open(c.systemd_loc+"kshift-startup.timer","w")
+    if not path.exists(f"{c.systemd_loc}kshift-startup.timer"):
+        file = open(c.systemd_loc+"kshift-startup.timer","w")
 
-    template = Template(open(f'{c.config_loc_base}/templates/template.timer').read());
+        template = Template(open(f'{c.config_loc_base}/templates/template.timer').read());
 
-    description = f'Kshift startup timer'
-    timer_action = f'OnStartupSec=5'
+        description = f'Kshift startup timer'
+        timer_action = f'OnStartupSec=5'
 
-    subs = { "description": description, "unit_options" : "", "timer_action":timer_action }
-    
-    file.write(template.substitute(subs))
-    file.close()
-
-    file = open(c.systemd_loc+"kshift-startup.service","w")
-    exec_name = os.path.basename(__file__)
+        subs = { "description": description, "unit_options" : "", "timer_action":timer_action }
+        
+        file.write(template.substitute(subs))
+        file.close()
 
     # write startup service
-    file = open(c.systemd_loc+"kshift-startup.service","w")
-    template = Template(open(f'{c.config_loc_base}/templates/template.service').read());
+    if not path.exists(f"{c.systemd_loc}kshift-startup.service"):
+        file = open(f"{c.systemd_loc}kshift-startup.service","w")
+        template = Template(open(f'{c.config_loc_base}/templates/template.service').read());
 
-    exec_name = os.path.basename(__file__)
+        exec_name = path.basename(__file__)
 
-    description = f'Kshift startup service'
-    command = f'{c.home}/.local/bin/{exec_name}'
+        description = f'Kshift startup service'
+        command = f'{c.home}/.local/bin/{exec_name}'
 
-    subs = { "description":description, "working_dir": c.config_loc_base ,"command":command }
+        subs = { "description":description, "working_dir": c.config_loc_base ,"command":command }
 
-    file.write(template.substitute(subs))
-    file.close()
+        file.write(template.substitute(subs))
+        file.close()
 
-    os.system("systemctl --user daemon-reload")
-    os.system("systemctl --user enable kshift-startup.timer")
-
-    for theme in themes:
-        if theme.time:
-            os.system("systemctl --user enable kshift-"+theme.name+".timer")
-            os.system("systemctl --user restart kshift-"+theme.name+".timer")
+    system("systemctl --user daemon-reload")
+    system("systemctl --user enable kshift-startup.timer")
 
 
 # Installs kshift
 # Copies executable, creates config file, utilizes the write timer func, and enables the timer
 def install():
 
-    exec_name = os.path.basename(__file__)
+    exec_name = path.basename(__file__)
 
     print("Linking Kshift to .local/bin...")
-    os.makedirs(c.home+"/.local/bin/", exist_ok=True)
+    makedirs(f"{c.home}/.local/bin/", exist_ok=True)
 
-    os.system("ln -s -f "+__file__+" "+c.home+"/.local/bin/"+exec_name)
+    system(f"ln -s -f {__file__} {c.home}/.local/bin/{exec_name}")
 
     var_loc = c.config_loc
     # Make config dir, possibly read config env
-    if not os.path.exists(c.config_loc_base):
-        os.makedirs(c.config_loc_base)
+    if not path.exists(c.config_loc_base):
+        makedirs(c.config_loc_base)
 
-    if not os.path.exists(c.config_loc_base+"/templates"):
-        os.system(f'cp -r templates {c.config_loc_base}')
+    if not path.exists(f"{c.config_loc_base}/templates"):
+        system(f'cp -r templates {c.config_loc_base}')
 
-    if not os.path.exists(var_loc):
-        print("Copying 'defaults.yml' to"+ var_loc+"...")
-        os.system("cp defaults.yml "+var_loc)
+    if not path.exists(var_loc):
+        print(f"Copying 'defaults.yml' to {var_loc}...")
+        system(f"cp defaults.yml {var_loc}")
 
-    os.makedirs(c.systemd_loc, exist_ok=True)
+    makedirs(c.systemd_loc, exist_ok=True)
 
     print("Writing theme timers and services...")
 
@@ -159,9 +168,9 @@ def remove_self():
 
     print("Removing kshift timers and services...")
 
-    os.system("rm "+c.systemd_loc+"kshift-*")
+    system(f"rm {c.systemd_loc}kshift-*")
 
-    os.system("systemctl --user daemon-reload")
+    system("systemctl --user daemon-reload")
 
 ###################################
 # Arg parsing
