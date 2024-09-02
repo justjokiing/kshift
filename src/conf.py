@@ -82,14 +82,14 @@ class config:
         self.sunrise = self.data["sunrise"]
         self.sunset = self.data["sunset"]
 
-        sunrise_chk = re.search("^[0-1]?[0-9]:[0-5][0-9]$", self.sunrise)
+        sunrise_chk = re.search("^[0-2]?[0-9]:[0-5][0-9]$", self.sunrise)
         if type(self.sunrise).__name__ != 'str' or not sunrise_chk:
             raise TypeError("'sunrise' variable not set correctly. Use the format HH:MM")
         else:
             sunrise_tmp = datetime.strptime(self.sunrise, "%H:%M")
             self.sunrise = self.today.replace(hour= sunrise_tmp.hour, minute=sunrise_tmp.minute)
 
-        sunset_chk = re.search("^[0-1]?[0-9]:[0-5][0-9]$", self.sunset)
+        sunset_chk = re.search("^[0-2]?[0-9]:[0-5][0-9]$", self.sunset)
         if type(self.sunset).__name__ != 'str' or not sunset_chk:
             raise TypeError("'sunset' variable not set correctly. Use the format HH:MM")
         else:
