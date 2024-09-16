@@ -18,12 +18,10 @@ defaults = {
     "themes": { 
         'day': {
             'colorscheme': 'BreezeLight', 
-            'wallpaper': '/usr/share/wallpapers/Flow/contents/images/5120x2880.jpg', 
             'time': 'sunrise'
         }, 
         'night': {
             'colorscheme': 'BreezeDark', 
-            'wallpaper': '/usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg', 
             'time': 'sunset'
         }
     }
