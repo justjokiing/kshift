@@ -55,7 +55,7 @@ def get_iconthemes():
 def curr_icontheme():
 
     curr = ""
-    kdeconfig_path = f"{os.path.expanduser("~")}/.config/kdeglobals"
+    kdeconfig_path = f"{os.path.expanduser('~')}/.config/kdeglobals"
 
     if os.path.exists(kdeconfig_path):
         config = configparser.ConfigParser()
