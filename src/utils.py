@@ -145,3 +145,32 @@ def systemd_to_datetime(time, today: datetime) -> datetime:
     return date
 
 
+# Gets the names of all available deskop themes
+def get_desktopthemes():
+
+    arr = []
+
+    desktopthemes_cmd = "plasma-apply-desktoptheme --list-themes"
+    output = subprocess.run(desktopthemes_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
+
+    for line in output.splitlines():
+        r = re.search(" \\* ([A-Za-z]*(-[A-Za-z]*)?)", line)
+        if r:
+            arr.append(r.group(1))
+
+    return arr
+
+# Gets the current desktoptheme
+def curr_desktoptheme():
+    curr = ""
+
+    desktoptheme_cmd = "plasma-apply-desktoptheme --list-themes"
+    output = subprocess.run(desktoptheme_cmd.split(), stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
+
+    for line in output.splitlines():
+        r = re.search(" \\* ([A-Za-z]*(-[A-Za-z]*)?) \\(current theme for the Plasma session\\)", line)
+        if r:
+            curr = r.group(1)
+            break
+
+    return curr
