@@ -14,14 +14,16 @@ themes:
     colorscheme: BreezeLight  # Check 'plasma-apply-colorscheme -l' for options
     icontheme: breeze
     wallpaper: /usr/share/wallpapers/Flow/contents/images/5120x2880.jpg
+    desktop-theme: breeze-light # Check 'plasma-apply-desktopscheme --list-themes' for options
     command: ''               # Runs command at theme activation
     time: sunrise             # Keywords 'sunrise', 'sunset', or ANY correct systemd 'OnCalendar' time
   night:
     colorscheme: BreezeDark
     icontheme: breeze-dark
     wallpaper: /usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg
+    desktoptheme: breeze-dark
     command: ''
-    time: 
+    time:
       - sunset
   october:
     wallpaper: /usr/share/wallpapers/FallenLeaf/contents/images/2560x1600.jpg
