@@ -1,0 +1,15 @@
+latitude: 39
+longitude: -77
+sunrise: '08:00'
+sunset: '18:00'
+rise_delay: 0
+set_delay: 0
+webdata: true
+net_timeout: 10
+themes:
+  day:
+    colorscheme: BreezeLight
+    time: sunrise
+  night:
+    colorscheme: BreezeDark
+    time: sunset

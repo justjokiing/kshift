@@ -1,99 +1,165 @@
-# [kshift](https://github.com/justjokiing/kshift) - KDE Theme Shift
+# [kshift](https://github.com/justjokiing/kshift): A KDE Plasma Theme Switcher
 
-`kshift` is a theme shifting program that integrates with the KDE Plasma desktop environment. The 'theme' includes wallpapers, icon themes, colorschemes, and custom commands. These themes can be run manually by `kshift -t <theme_name>` or by a set time in the `kshift` configuration file. If there is a theme time set, the theme will run automatically through the use of `systemd` timers. Theme times use the same calendar event syntax as systemd timers, but also includes the custom times of `sunrise` and `sunset`. The sunrise and sunset times are determined by the [sunrisesunset.io](https://sunrisesunset.io/) API.
+## Overview
+
+kshift is a dynamic theme manager for KDE Plasma that automatically changes your system's theme (color scheme, icon theme, desktop theme, and wallpaper) based on predefined schedules, times of day, or solar events (e.g., sunrise and sunset). It supports advanced configurations using `systemd` timers, making it a highly customizable solution for KDE Plasma users who want seamless transitions between themes.
 
 ## Demo
 
-This demo shows a shift from one theme to another manually, then kshift determining the correct theme to switch to.
+https://github.com/user-attachments/assets/c18332df-b3b7-4bda-9254-e061a7fa0367
 
-https://github.com/justjokiing/kshift/assets/64444712/02e64459-5f5b-477b-a0aa-bdfcd431772d
+## Why Use kshift?
 
+**Effortless and Dynamic Theme Automation**: Save time by automating theme changes for morning, evening, or specific events without manual adjustments. Coordinate your system's appearance with wallpapers, icon themes, and desktop themes that match the time of day or occasion.
 
-## Usage
+**Customizable and Reliable Schedules**: Define unique schedules for themes using flexible time settings or solar events like sunrise and sunset. With systemd integration, theme changes are guaranteed to occur on time, even after system reboots.
 
-    usage: kshift [-h] [-w WALLPAPER] [-c COLORSCHEME] [-i ICONTHEME] [-t {day,night}] [--install | --remove | -s]
+**Simple and Lightweight**: kshift is built around a straightforward CLI interface and a single YAML configuration file. This design keeps it lightweight and efficient, with no background processes required. By leveraging systemd for scheduling, kshift ensures seamless theme transitions with minimal system resource usage.
 
-    KDE Theme Switching
-
-    options:
-      -h, --help            show this help message and exit
-      -w WALLPAPER, --wallpaper WALLPAPER
-                            Sets the current wallpaper
-      -c COLORSCHEME, --colorscheme COLORSCHEME
-                            Sets the colorscheme
-      -i ICONTHEME, --icontheme ICONTHEME
-                            Sets the icon theme
-      -t {<theme1>,<theme2>}, --theme {<theme1>,<theme2>}
-                            Sets the theme
-      --install             Installs Kshift
-      --remove              Removes Kshift
-      -s, --status          Displays kshift timing information
 
 ## Installation
 
-#### Required Programs
-* KDE Plasma
-* Systemd
-* Python 3
-* Pip
+### Prerequisites
 
-#### Instructions
+Ensure you have the following installed:
 
-1. Install colorama, then clone and enter kshift
-    ```
-    pip install colorama
-    git clone https://github.com/justjokiing/kshift
-    cd kshift/src
-    ```
-2. Edit the default variables in the variable file `defaults.yml` or look at usage for command line arguments    
-   ```
-    # API for getting sun data
-    # find yours @ https://sunrisesunset.io/
-    # scroll to the bottom of the page, find JSON API link
-    sun_api: 'https://api.sunrisesunset.io/json?lat=38.907192&lng=-77.036873'
-    sunrise: '07:00'   # Default sunrise time, when time data cannot be accessed. These must be in quotes.
-    sunset: '19:00'    # Default sunset  time
-    rise_delay: 0      # Hour delay for sunrise, can be negative
-    set_delay: 0       # Hour delay for sunset
-    webdata: true      # Boolean for accessing web for time data
-    net_timeout: 10    # How long to wait for network timeout
-    themes:
-      day:
-        colorscheme: BreezeLight  # Check 'plasma-apply-colorscheme -l' for options
-        icontheme: breeze
-        wallpaper: /usr/share/wallpapers/Flow/contents/images/5120x2880.jpg
-        command: ''               # Runs command at theme activation
-        time: sunrise             # Keywords 'sunrise', 'sunset', or ANY correct systemd 'OnCalendar' time
-      night:
-        colorscheme: BreezeDark
-        icontheme: breeze-dark
-        wallpaper: /usr/share/wallpapers/Flow/contents/images_dark/5120x2880.jpg
-        command: ''
-        time: 
-          - sunset
-      october:
-        wallpaper: /usr/share/wallpapers/FallenLeaf/contents/images/2560x1600.jpg
-        time: '*-10-* *:*:*'
-        enabled: false            # Disables theme, it will not run on time
-   ```
-	The themes default are set to a set of default day and night KDE themes and wallpapers. You can add as many themes as you would like at many different times, wallpapers, commands, icons, and colorschemes. None of the theme variables are required. If time is not set, there will be no automatic transition. Each theme's time will be converted to SystemD 'OnCalendar' syntax. The default for 'enabled' is true.
-    
-    The time variables "sunrise" and "sunset" are keywords to kshift and are replaced with the sunrise and sunset times that your `sun_api` variable sets. Find your api link by going to [sunrisesunset.io](https://sunrisesunset.io/), find your city, then scroll to the bottom to where it says 'JSON API'.
+- KDE Plasma
+- systemd
+- Python 3.7+
+- Pip
 
-   Make sure to use correct YAML.
+### Install via `pip`
+
+```bash
+pip install kshift
+```
+
+### Setup
+
+Run the following command to install kshift's systemd services and timers:
+
+```bash
+kshift install
+```
+
+This creates necessary configuration and systemd files in your user directory.
+
+## Configuration
+
+kshift uses a YAML configuration file, created during `install` and located at `~/.config/kshift/kshift.yml`. Below is a guide to setting up and customizing your configuration.
+
+Use the command `kshift conf` to open the configuration file in your default editor. Load and confirm this configuration by running `kshift`
+
+### Default Configuration
+
+```yaml
+latitude: 39
+longitude: -77
+sunrise: '08:00'
+sunset: '18:00'
+rise_delay: 0
+set_delay: 0
+webdata: true
+net_timeout: 10
+themes:
+  day:
+    colorscheme: BreezeLight
+    time: sunrise
+  night:
+    colorscheme: BreezeDark
+    time: sunset
+```
+
+### Key Configuration Parameters
+
+#### Global Settings
+
+All global parameters are optional; if not provided, they will use the default values as shown in the Default Configuration section above.
+
+| Parameter     | Description                                             |
+| ------------- | ------------------------------------------------------- |
+| `latitude`    | Latitude coordinate for solar data                      |
+| `longitude`   | Longitude coordinate for solar data                     |
+| `sunrise`     | Default sunrise time in `HH:MM` format                  |
+| `sunset`      | Default sunset time in `HH:MM` format                   |
+| `rise_delay`  | Delay sunrise by the specified hours (negative allowed) |
+| `set_delay`   | Delay sunset by the specified hours (negative allowed)  |
+| `webdata`     | Enable or disable fetching solar data from the web      |
+| `net_timeout` | Timeout for fetching solar data in seconds              |
+
+#### Themes
+
+All parameters are optional, but to enable automatic theme switching, a `time` variable must be specified.
+
+| Parameter      | Description                                         | Example Value                     |
+| -------------- | --------------------------------------------------- | --------------------------------- |
+| `colorscheme`  | Name of the Plasma color scheme                     | `BreezeLight`                     |
+| `icontheme`    | Name of the icon theme                              | `Papirus-Dark`                    |
+| `wallpaper`    | Path to the wallpaper image                         | `~/Pictures/morning.jpg`          |
+| `desktoptheme` | Name of the Plasma desktop theme                    | `Breeze`                          |
+| `command`      | Custom command to execute when the theme is applied | `echo 'Theme applied'`            |
+| `time`         | Schedule for theme activation                       | `sunset`, `HH:MM`, `weekly`       |
+
+The `time` variable must either be a sun position (sunrise/sunset), a simple 24HR time (HH:MM), or a string that is a valid `systemd OnCalendar` time. 
+
+If you use a sun position, this will be converted to a 24HR time using the coordinate variables of the configuration.
+
+`OnCalendar` uses a cron-like expression that can represent one or more times in a single expression. More information on this format [here](https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html#Calendar%20Events)
+
+## Usage
+
+### Command-Line Options
+
+Run `kshift` with various options:
+
+- `theme [THEME_NAME]`: Apply a specific theme by name. If no name is provided, kshift determines the appropriate theme to apply based on time and configuration.
+    - Positional argument `[THEME_NAME]`: Optional. Specify the theme to apply.
+    - `-c, --colorscheme <scheme>`: Apply a specific colorscheme (overrides the theme configuration).
+    - `-i, --icontheme <theme>`: Apply a specific icon theme (overrides the theme configuration).
+    - `-w, --wallpaper <path>`: Apply a specific wallpaper (overrides the theme configuration).
+    - `-dk, --desktop_theme <theme>`: Apply a specific desktop theme (overrides the theme configuration).
+- `install`: Install systemd services and timers for kshift.
+- `remove`: Remove systemd services and timers for kshift.
+- `status`: Display the current status of kshift and active timers.
+- `config`: Open the kshift configuration file in the default editor for editing.
+- `logs`: View the most recent entries from the kshift log file.
+- `list`: List possible themes or attributes
+
+### Examples
+| **Command**                                | **Description**                                                  |
+|--------------------------------------------|------------------------------------------------------------------|
+| `kshift theme night`                       | Apply a theme by name.                                           |
+| `kshift`                                   | Have kshift determine the current theme and apply it.            |
+| `kshift status`                            | Check current status.                                            |
+| `kshift theme night -c BreezeLight -w ~/cat.png` | Apply a theme with modifications.                                 |
+| `kshift theme -w ~/cat.png`                | Apply a theme attribute with no theme.                          |
+| `kshift list themes`                       | List available kshift themes                                     |
+| `kshift list colorschemes`                 | List available colorschemes                                      |
 
 
-3. Create the systemd services and add kshift to local bin
-    ```
-    ./kshift --install
-    ```
+## Systemd Integration
 
-    kshift will now be be installed to `~/.local/bin` . Ensure that directory is in `$PATH` if wanted to be manually executed. The kshift timer will be updated after each execution. 
+kshift leverages `systemd` timers to provide robust and reliable automation of theme changes. This integration ensures that:
 
-    kshift variables will then be located at `~/.config/kshift/kshift.yml` and follows the same format of `defaults.yml`, any further variable can be done by editing that file or using the `--install` option.
+1. **Timely Theme Switching**: Each theme is tied to a `systemd` timer, which allows precise scheduling of theme changes based on time or solar events.
+2. **Automatic Startup**: A dedicated startup timer ensures that kshift applies the correct theme when your system boots up.
+3. **Flexibility with OnCalendar**: `systemd`'s `OnCalendar` expressions provide flexibility for advanced scheduling. For example, you can schedule themes to activate at exact times, specific days of the week, or even recurring intervals.
 
-4. Now check to see if the system timers are on and working.
-    ```
-    ./kshift --status
-    ```
-    Then test out your themes.
+### How It Works
+
+- When you install kshift (`kshift install`), it creates a `systemd` service and timer for each theme defined in your configuration.
+- The templates used for the services and timers are located in your configuration directory, where if you edit them, their changes will be reflected in the next write.
+- The timers are then activated, and `systemd` ensures that the correct theme is applied at the scheduled time.
+- The startup timer runs shortly after the system boots, ensuring that kshift applies the most relevant theme based on the current time.
+
+## Uninstallation
+
+To remove kshift, run:
+
+1. `kshift remove` 
+
+    This disables and removes all related systemd timers and services.
+
+2. `pip uninstall kshift`
+
+    Removes the `kshift` package from your computer

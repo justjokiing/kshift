@@ -2,5 +2,5 @@
 Description=$description
 
 [Service]
-WorkingDirectory=$working_dir
+Environment="SOURCE=systemd"
 ExecStart=$command

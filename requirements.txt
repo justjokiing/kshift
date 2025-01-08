@@ -1,0 +1,7 @@
+click
+colorama
+pydantic
+pytest
+pytest-mock
+PyYAML
+Requests

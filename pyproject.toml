@@ -9,14 +9,65 @@ authors = [
   { name="Seth Mackert", email="seth.mackert@fastsycamore.com" },
 ]
 description = "KDE Theme Shift"
-license = "GPL-3.0-or-later"
+license = { text = "GPL-3.0-or-later" }
 readme = "README.md"
-requires-python = ">=3.7"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Dependent",
+    "Programming Language :: Python",
+
+    # Development Status
+    "Development Status :: 4 - Beta", # If your project is stable, switch to "5 - Production/Stable"
+
+    # Environment
+    "Environment :: X11 Applications :: KDE",
+    "Environment :: Console",
+
+    # Intended Audience
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+
+    # Topic
+    "Topic :: Desktop Environment :: K Desktop Environment (KDE)",
+    "Topic :: Desktop Environment :: K Desktop Environment (KDE) :: Themes",
+    "Topic :: Utilities",
+
+    # Operating System
+    "Operating System :: POSIX :: Linux",
+
+    # License
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
-keywords = ["KDE", "theme", "script"]
+keywords = [
+    "KDE",
+    "theme",
+    "desktop environment",
+    "automation",
+    "script",
+    "theme switching",
+    "Linux",
+    "color scheme",
+    "wallpaper",
+    "icon theme",
+    "Plasma",
+    "KDE Plasma",
+    "desktop customization",
+    "timers",
+    "systemd",
+    "sunrise sunset",
+    "cron replacement"
+]
+dependencies = [
+    "click",
+    "colorama",
+    "pydantic",
+    "PyYAML",
+    "Requests"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/justjokiing/kshift"
+
+[project.scripts]
+kshift = "kshift.main:cli"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
