@@ -30,15 +30,16 @@ log_file = c.xdg_cache / "kshift" / "kshift.log"
 cache_dir = log_file.parent
 cache_dir.mkdir(parents=True, exist_ok=True)
 
-logging.basicConfig(filename=log_file,
-                    level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s",
-                    datefmt="%Y-%m-%d %H:%M:%S")
-
-handler = RotatingFileHandler("theme_changes.log",
+# Setup RotatingFileHandler for the same file
+handler = RotatingFileHandler(log_file,
                               maxBytes=1 * 1024 * 1024,
                               backupCount=1)
-logging.getLogger().addHandler(handler)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s",
+                              datefmt="%Y-%m-%d %H:%M:%S")
+handler.setFormatter(formatter)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 
 def log_theme_change(theme_name):
