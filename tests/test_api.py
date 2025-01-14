@@ -2,10 +2,11 @@ from datetime import datetime
 
 
 def test_get_sundata_real_api(mocker):
+    from kshift.theme import Colorscheme
 
-    # Apply the mock_run behavior to the mock
-    mock_subprocess_run = mocker.patch("kshift.utils.subprocess.run")
-    mock_subprocess_run.return_value.stdout = "You have the following color schemes on your system:\n * BreezeClassic\n * BreezeDark (current color scheme)\n * BreezeLight"
+    mocker.patch.object(Colorscheme, 'available',
+                        ["BreezeClassic", "BreezeDark", "BreezeLight"])
+    mocker.patch.object(Colorscheme, 'current', "BreezeDark")
 
     from kshift.conf import Config, defaults
 

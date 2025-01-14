@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "kshift"
-version = "1.0.1"
+version = "1.2.0"
 authors = [
   { name="Seth Mackert", email="seth.mackert@fastsycamore.com" },
 ]
@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python",
 
     # Development Status
-    "Development Status :: 4 - Beta", # If your project is stable, switch to "5 - Production/Stable"
+    "Development Status :: 5 - Production/Stable",
 
     # Environment
     "Environment :: X11 Applications :: KDE",

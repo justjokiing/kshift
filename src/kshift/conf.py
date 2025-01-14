@@ -7,136 +7,12 @@ import subprocess
 import requests
 import json
 
-from kshift import utils
+from kshift.theme import Theme
 
 from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Dict, Optional, Union, List
-
-
-class ThemeConfig(BaseModel):
-    # name: str = Field(description="Name for kshift theme")
-    colorscheme: Optional[str] = Field(
-        None, description="The name of the color scheme.")
-    icontheme: Optional[str] = Field(None,
-                                     description="The name of the icon theme.")
-    wallpaper: Optional[str] = Field(
-        None, description="Path to the wallpaper image.")
-    desktoptheme: Optional[str] = Field(None,
-                                        description="The desktop theme name.")
-    command: Optional[str] = Field(
-        None, description="Command to execute when the theme is applied.")
-    time: List[Union[str, datetime]] = Field(
-        [], description="The time when this theme is applied.")
-    enabled: bool = Field(True, description="Whether the theme is enabled.")
-
-    def kshift(self) -> None:
-
-        if self.wallpaper:
-            os.system(f"plasma-apply-wallpaperimage {self.wallpaper}")
-
-        if self.colorscheme and self.colorscheme != utils.curr_colorscheme():
-            os.system(f"plasma-apply-colorscheme {self.colorscheme}")
-
-        # if self.icontheme and self.icontheme != utils.curr_icontheme():
-        if self.icontheme:
-            plasma_changeicons = utils.find_plasma_changeicons()
-            if (plasma_changeicons is not None):
-                os.system(f"{plasma_changeicons} {self.icontheme}")
-
-        if self.desktoptheme and self.desktoptheme != utils.curr_desktoptheme(
-        ):
-            os.system(f"plasma-apply-desktoptheme {self.desktoptheme}")
-
-        if self.command:
-            os.system(self.command)
-
-    @field_validator("colorscheme")
-    def validate_colorscheme(cls, value):
-        colorschemes = utils.get_colorschemes()
-        if value and value not in colorschemes:
-            raise ValueError(
-                f"Unknown colorscheme: {value}.\nValid options are {colorschemes}"
-            )
-        else:
-            return value
-
-    @field_validator("icontheme")
-    def validate_icontheme(cls, value):
-        iconthemes = utils.get_iconthemes()
-        if value and value not in iconthemes:
-            raise ValueError(
-                f"Unknown icontheme: {value}.\nValid options are {iconthemes}")
-        else:
-            return value
-
-    @field_validator("wallpaper")
-    def validate_wallpaper(cls, value):
-        if value:
-            value = Path(value).expanduser()
-            if value.exists():
-                return value
-            else:
-                raise ValueError(f"Wallpaper does not exist: {value}")
-
-    @field_validator("desktoptheme")
-    def validate_desktoptheme(cls, value):
-        desktopthemes = utils.get_desktopthemes()
-        if value and value not in desktopthemes:
-            raise ValueError(
-                f"Unknown desktoptheme: {value}.\nValid options are {desktopthemes}"
-            )
-        else:
-            return value
-
-    @field_validator("time", mode="before")
-    def parse_time(cls, value):
-        if isinstance(value, str):
-            return [value]  # Convert single string to a list
-        elif isinstance(value, list):
-            if not all(isinstance(item, str) for item in value):
-                raise ValueError(
-                    "All elements in the 'time' list must be strings.")
-            return value
-        else:
-            raise TypeError("'time' must be a string or a list of strings.")
-
-    @model_validator(mode="after")
-    def if_disabled(self):
-        if not self.enabled:
-            self.time = []
-
-        return self
-
-    @field_validator("time", mode="after")
-    def convert_time_strings(cls, times):
-        new_times = []
-        for item in times:
-            if isinstance(item, str):
-                if re.match(r'^\d{2}:\d{2}$', item):
-                    # Parse "HH:MM" into a datetime object with today's date
-                    now = datetime.now()
-                    hour, minute = map(int, item.split(':'))
-                    dt = now.replace(hour=hour,
-                                     minute=minute,
-                                     second=0,
-                                     microsecond=0)
-                    # If the time has already passed today, schedule for tomorrow
-                    if dt < now:
-                        dt += timedelta(days=1)
-                    item = dt
-
-                new_times.append(item)
-            elif isinstance(item, datetime):
-                new_times.append(item)
-            else:
-                raise TypeError(
-                    "Each time entry must be a string in systemd OnCalendar format."
-                )
-
-        return new_times
-
+from typing import Dict
 
 defaults = {
     "latitude": 39,
@@ -147,8 +23,8 @@ defaults = {
     "set_delay": 0,
     "net_timeout": 10,
     "themes": {
-        'day': ThemeConfig(colorscheme="BreezeLight", time=["sunrise"]),
-        'night': ThemeConfig(colorscheme="BreezeDark", time=["sunset"]),
+        'day': Theme(colorscheme="BreezeLight", time=["sunrise"]),
+        'night': Theme(colorscheme="BreezeDark", time=["sunset"]),
     }
 }
 
@@ -172,6 +48,7 @@ class Config(BaseModel):
     sunset: datetime = Field(
         datetime.strptime(defaults["sunset"], "%H:%M"),
         description="Default sunset time in HH:MM format.")
+
     rise_delay: int = Field(
         defaults["rise_delay"],
         ge=-23,
@@ -190,8 +67,8 @@ class Config(BaseModel):
         ge=0,
         le=60,
         description="Network timeout in seconds, between 0 and 60.")
-    themes: Dict[str, ThemeConfig] = Field(defaults["themes"],
-                                           description="Dictionary of themes.")
+    themes: Dict[str, Theme] = Field(defaults["themes"],
+                                     description="Dictionary of themes.")
 
     # Environment-based paths
     home_directory: Path = Field(default=Path.home(),
@@ -229,7 +106,7 @@ class Config(BaseModel):
         description="Path to the cache file for sunrise and sunset data.")
 
     @model_validator(mode="after")
-    def set_dependant(self):
+    def set_dependant_paths(self):
         # Compute dependent paths
         self.systemd_loc = self.xdg_data / "systemd/user"
         self.config_loc_base = self.xdg_config / "kshift"
@@ -266,7 +143,30 @@ class Config(BaseModel):
                     elif t == "sunset":
                         t = apply_delay(self.get_sundata(t), self.set_delay)
                     else:
-                        t = utils.time_to_systemd(t)
+
+                        # Determine if theme time is a valid calendar time
+                        if t:
+                            process = subprocess.run(
+                                ["systemd-analyze", "calendar", t],
+                                stdout=subprocess.PIPE)
+                            stat_code = process.returncode
+
+                            if stat_code == 0:
+                                calendar_time = ""
+                                output = process.stdout.decode('utf-8').strip()
+
+                                for line in output.splitlines():
+                                    r = re.search("Normalized form: (.*)",
+                                                  line)
+                                    if r:
+                                        calendar_time = r.group(1)
+                                        break
+
+                                t = calendar_time
+
+                            else:
+                                raise ValueError(
+                                    "Invalid systemd calendar time!: " + t)
 
                     updated_times.append(t)
                 elif isinstance(t, datetime):

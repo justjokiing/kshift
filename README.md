@@ -10,7 +10,7 @@ https://github.com/user-attachments/assets/c18332df-b3b7-4bda-9254-e061a7fa0367
 
 ## Why Use kshift?
 
-**Effortless and Dynamic Theme Automation**: Save time by automating theme changes for morning, evening, or specific events without manual adjustments. Coordinate your system's appearance with wallpapers, icon themes, and desktop themes that match the time of day or occasion.
+**Effortless and Dynamic Theme Automation**: Save time by automating theme changes for morning, evening, or specific events without manual adjustments. Coordinate your system's appearance with colorschemes, wallpapers, cursorthemes, icon themes, and desktop themes that match the time of day or occasion.
 
 **Customizable and Reliable Schedules**: Define unique schedules for themes using flexible time settings or solar events like sunrise and sunset. With systemd integration, theme changes are guaranteed to occur on time, even after system reboots.
 
@@ -94,9 +94,10 @@ All parameters are optional, but to enable automatic theme switching, a `time` v
 | Parameter      | Description                                         | Example Value                     |
 | -------------- | --------------------------------------------------- | --------------------------------- |
 | `colorscheme`  | Name of the Plasma color scheme                     | `BreezeLight`                     |
+| `cursortheme`  | Name of the Plasma cursor theme                     | `HighContrast`                    |
+| `desktoptheme` | Name of the Plasma desktop theme                    | `Breeze`                          |
 | `icontheme`    | Name of the icon theme                              | `Papirus-Dark`                    |
 | `wallpaper`    | Path to the wallpaper image                         | `~/Pictures/morning.jpg`          |
-| `desktoptheme` | Name of the Plasma desktop theme                    | `Breeze`                          |
 | `command`      | Custom command to execute when the theme is applied | `echo 'Theme applied'`            |
 | `time`         | Schedule for theme activation                       | `sunset`, `HH:MM`, `weekly`       |
 
@@ -115,9 +116,10 @@ Run `kshift` with various options:
 - `theme [THEME_NAME]`: Apply a specific theme by name. If no name is provided, kshift determines the appropriate theme to apply based on time and configuration.
     - Positional argument `[THEME_NAME]`: Optional. Specify the theme to apply.
     - `-c, --colorscheme <scheme>`: Apply a specific colorscheme (overrides the theme configuration).
+    - `-csr, --cursortheme <theme>`: Apply a specific cursor theme (overrides the theme configuration).
+    - `-dk, --desktop_theme <theme>`: Apply a specific desktop theme (overrides the theme configuration).
     - `-i, --icontheme <theme>`: Apply a specific icon theme (overrides the theme configuration).
     - `-w, --wallpaper <path>`: Apply a specific wallpaper (overrides the theme configuration).
-    - `-dk, --desktop_theme <theme>`: Apply a specific desktop theme (overrides the theme configuration).
 - `install`: Install systemd services and timers for kshift.
 - `remove`: Remove systemd services and timers for kshift.
 - `status`: Display the current status of kshift and active timers.

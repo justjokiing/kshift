@@ -14,11 +14,11 @@ import json
 
 from importlib.resources import files
 
-from kshift.conf import ThemeConfig, load_config
+from kshift.conf import load_config
 
 from string import Template
 
-import kshift.utils
+from kshift.theme import *
 
 c = load_config()
 
@@ -54,7 +54,7 @@ def log_theme_change(theme_name):
     logging.info(json.dumps(log_data))  # Use JSON for structured logs
 
 
-def log_element_change(theme: ThemeConfig):
+def log_element_change(theme: Theme):
     log_data = {"event": "specific_change", "theme": str(theme)}
     logging.info(json.dumps(log_data))
 
@@ -277,7 +277,17 @@ def status():
 @cli.command(help="Edit the kshift configuration file")
 def config():
     """Edit the configuration file."""
-    kshift.utils.open_in_default_editor(c.config_loc)
+
+    filepath = c.config_loc
+    if filepath.exists():
+        try:
+            # Use xdg-open to open the file in the default editor
+            subprocess.run(["xdg-open", filepath], check=True)
+            print(f"Opened {filepath} in the default editor.")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to open the file: {e}")
+    else:
+        print(f"Config does not exist @ {filepath}")
 
 
 @cli.command(help="Tail on kshift logs")
@@ -301,26 +311,39 @@ def logs(all):
 
 @cli.command(help="List possible themes or attributes")
 @click.argument("attribute",
-                type=click.Choice(
-                    ["themes", "colorschemes", "iconthemes", "desktopthemes"],
-                    case_sensitive=False))
+                type=click.Choice([
+                    "themes", "colorschemes", "cursorthemes", "desktopthemes",
+                    "iconthemes", "wallpapers"
+                ],
+                                  case_sensitive=False))
 def list(attribute):
+
+    def print_available(attr, items):
+        print(f"Available {attr}:")
+        for a in items:
+            print(f"- {a}")
+
     if attribute == "themes":
-        print("Available themes:")
-        for name, theme_config in c.themes.items():
-            print(f"- {name}")
-    elif attribute == "colorschemes":
-        print("Available colorschemes:")
-        for colorscheme in kshift.utils.get_colorschemes():
-            print(f"- {colorscheme}")
-    elif attribute == "iconthemes":
-        print("Available icon themes:")
-        for icontheme in kshift.utils.get_iconthemes():
-            print(f"- {icontheme}")
-    elif attribute == "desktopthemes":
-        print("Available desktop themes:")
-        for desktop_theme in kshift.utils.get_desktopthemes():
-            print(f"- {desktop_theme}")
+        for name, conf in c.themes.items():
+            print(f"theme: {name}\n    {conf}\n")
+            pass
+
+    items = []
+    match attribute:
+    # items are the class.available
+        case "colorschemes":
+            items = Colorscheme.fetch_colorschemes()[0]
+        case "cursorthemes":
+            items = CursorTheme.fetch_cursorthemes()[0]
+        case "desktopthemes":
+            items = DesktopTheme.fetch_desktopthemes()[0]
+        case "iconthemes":
+            items = IconTheme.fetch_iconthemes()[0]
+        case "wallpapers":
+            items = Wallpaper.fetch_wallpapers()[0]
+
+    if items:
+        print_available(attribute, items)
 
 
 @cli.command(help="Change themes or apply specific theme elements")
@@ -331,10 +354,22 @@ def list(attribute):
                 nargs=1,
                 metavar="[THEME_NAME]")
 @click.option(
+    "-csr",
+    "--cursortheme",
+    type=str,
+    help="Set a specific cursor theme (overrides theme)",
+)
+@click.option(
     "-c",
     "--colorscheme",
     type=str,
     help="Set a specific colorscheme (overrides theme)",
+)
+@click.option(
+    "-dk",
+    "--desktop_theme",
+    type=str,
+    help="Set a specific desktop theme (overrides theme)",
 )
 @click.option(
     "-i",
@@ -348,13 +383,8 @@ def list(attribute):
     type=str,
     help="Set a specific wallpaper (overrides theme)",
 )
-@click.option(
-    "-dk",
-    "--desktop_theme",
-    type=str,
-    help="Set a specific desktop theme (overrides theme)",
-)
-def theme(theme, colorscheme, icontheme, wallpaper, desktop_theme):
+def theme(theme, colorscheme, cursortheme, desktop_theme, icontheme,
+          wallpaper):
 
     kshift_status = subprocess.run(
         "systemctl --user is-enabled kshift-startup.timer".split(),
@@ -368,10 +398,11 @@ def theme(theme, colorscheme, icontheme, wallpaper, desktop_theme):
         else:
             print(f"Error: Theme '{theme}' not found in configuration.")
 
-    if any([colorscheme, icontheme, wallpaper, desktop_theme]):
+    if any([colorscheme, cursortheme, desktop_theme, icontheme, wallpaper]):
         # Apply individual theme elements dynamically
-        custom_theme = ThemeConfig(
+        custom_theme = Theme(
             colorscheme=colorscheme,
+            cursortheme=cursortheme,
             icontheme=icontheme,
             wallpaper=wallpaper,
             desktoptheme=desktop_theme,
