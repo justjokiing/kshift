@@ -252,7 +252,7 @@ class Wallpaper(BaseAttribute):
                 self.path = Path(self.val).expanduser()
 
         if self.path and self.path.exists():
-            self.val = str(self.path)
+            self.val = f"'{str(self.path)}'"
 
             if self.val not in self.available:
                 self.available.append(self.val)
