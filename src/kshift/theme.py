@@ -21,7 +21,7 @@ class BaseAttribute(BaseModel):
 
     def apply(self):
         if self.val and self.val != self.current:
-            os.system(f"{self.command} {self.val}")
+            os.system(f"{self.command} '{self.val}'")
 
     @classmethod
     def fetch_themes(cls, cmd: str,
@@ -73,7 +73,7 @@ class Colorscheme(BaseAttribute):
     @classmethod
     def fetch_colorschemes(cls) -> Tuple[List[str], Optional[str]]:
         """Fetch available colorschemes and the current colorscheme."""
-        return cls.fetch_themes(f"{cls.command} -l", r" \* ([A-Za-z]*)")
+        return cls.fetch_themes(f"{cls.command} -l", r" \* ([\w\s\-]+\w)")
 
     @model_validator(mode="after")
     def init_colorschemes(self):
