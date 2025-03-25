@@ -159,7 +159,11 @@ class IconTheme(BaseAttribute):
         if kdeconfig_path.exists():
             config = configparser.ConfigParser()
             config.read(kdeconfig_path)
-            cls.current = config.get("Icons", "Theme")
+
+            if config.has_section("Icons"):
+                cls.current = config.get("Icons", "Theme")
+            else:
+                cls.current = None
 
         return cls.available, cls.current
 
