@@ -48,7 +48,7 @@ This creates necessary configuration and systemd files in your user directory.
 
 kshift uses a YAML configuration file, created during `install` and located at `~/.config/kshift/kshift.yml`. Below is a guide to setting up and customizing your configuration.
 
-Use the command `kshift conf` to open the configuration file in your default editor. Load and confirm this configuration by running `kshift`
+Use the command `kshift config` to open the configuration file in your default editor. Load and confirm this configuration by running `kshift`
 
 ### Default Configuration
 
