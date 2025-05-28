@@ -21,7 +21,7 @@ class BaseAttribute(BaseModel):
 
     def apply(self):
         if self.val and self.val != self.current:
-            os.system(f"{self.command} '{self.val}'")
+            subprocess.run([self.command, self.val])
 
     @classmethod
     def fetch_themes(cls, cmd: str,
@@ -256,7 +256,7 @@ class Wallpaper(BaseAttribute):
                 self.path = Path(self.val).expanduser()
 
         if self.path and self.path.exists():
-            self.val = f"'{str(self.path)}'"
+            self.val = str(self.path)
 
             if self.val not in self.available:
                 self.available.append(self.val)
