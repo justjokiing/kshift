@@ -1,0 +1,42 @@
+name: Publish to AUR
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  push-to-aur:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Arch build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git arch-install-scripts
+      
+      - name: Checkout AUR repository
+        uses: actions/checkout@v4
+        with:
+          repository: aur.archlinux.org/kshift.git
+          path: aur-repo
+          ssh-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          fetch-depth: 0
+
+      - name: Update PKGBUILD with new version and checksums
+        run: |
+          cd aur-repo
+          
+          version="${{ github.event.release.tag_name }}"
+          clean_version="${version#v}"
+
+          sed -i "s/^pkgver=.*/pkgver=${clean_version}/" PKGBUILD
+          
+          makepkg --printsrcinfo > .SRCINFO
+
+      - name: Commit and push to AUR
+        run: |
+          cd aur-repo
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "chore(aur): Automated update for release ${clean_version}"
+          git push
