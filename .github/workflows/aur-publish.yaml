@@ -1,4 +1,4 @@
-name: Publish to AUR
+name: Publish kshift to AUR
 
 on:
   release:
