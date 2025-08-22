@@ -383,12 +383,6 @@ def list(attribute):
     type=str,
     help="Set a specific wallpaper (overrides theme)",
 )
-@click.option(
-    "-dk",
-    "--desktop_theme",
-    type=str,
-    help="Set a specific desktop theme (overrides theme)",
-)
 def theme(theme, colorscheme, cursortheme, desktop_theme, icontheme,
           wallpaper):
 
