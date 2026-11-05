@@ -2,7 +2,7 @@
 
 import click
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import system, makedirs, getenv
 from re import search
 import subprocess
@@ -85,7 +85,7 @@ def parse_theme_logs(log_file, reference_time=None):
                         "source") == "systemd" and c.themes.get(
                             log_entry.get("theme")):
 
-                    log_time = datetime.fromisoformat(timestamp)
+                    log_time = datetime.fromisoformat(timestamp.strip())
                     return (log_entry["theme"], log_time)
 
             except (json.JSONDecodeError, ValueError):
@@ -93,6 +93,39 @@ def parse_theme_logs(log_file, reference_time=None):
                 continue
 
     return last_theme
+
+
+def _select_current_theme(themes, reference_time=None, last_log_theme=None):
+    """Return the theme whose most recent daily activation has occurred."""
+    now = reference_time or datetime.now()
+    now_minute = now.replace(second=0, microsecond=0)
+    candidates = []
+
+    # Theme timer events recur daily. Compare their wall-clock minute, rather
+    # than the date used when the config was loaded or solar seconds that
+    # systemd's HH:MM OnCalendar trigger cannot represent.
+    for name, config in themes.items():
+        for scheduled_time in config.time:
+            if not isinstance(scheduled_time, datetime):
+                continue
+            for day_offset in (0, 1):
+                event_date = now.date() - timedelta(days=day_offset)
+                event_time = datetime.combine(event_date,
+                                              scheduled_time.time())
+                event_time = event_time.replace(second=0, microsecond=0)
+                if event_time <= now_minute:
+                    candidates.append((event_time, 0, name))
+
+    if last_log_theme:
+        name, log_time = last_log_theme
+        log_time = log_time.replace(second=0, microsecond=0)
+        if log_time <= now_minute:
+            candidates.append((log_time, 1, name))
+
+    if not candidates:
+        return None
+
+    return max(candidates)[2]
 
 
 ###################################
@@ -121,6 +154,10 @@ def write_systemd():
 
     kshift_path = which("kshift") or "kshift"
     written_timers = []
+    units_changed = False
+    automatic_schedule = all(
+        not conf.time or all(isinstance(t, datetime) for t in conf.time)
+        for conf in c.themes.values())
 
     # Remove any old timers
     for name, conf in c.themes.items():
@@ -176,12 +213,23 @@ def write_systemd():
                 }
                 write_timer(timer_path, subs)
                 written_timers.append(name)
+                units_changed = True
 
-            subs = {
-                "description": f'kshift service for theme {name}',
-                "command": f"{kshift_path} theme {name}"
-            }
-            write_service(c.systemd_loc / f"kshift-{name}.service", subs)
+        service_path = c.systemd_loc / f"kshift-{name}.service"
+        service_theme = (""
+                         if automatic_schedule and conf.time else f" {name}")
+        service_content = Template(
+            open(c.config_loc_base /
+                 "templates/template.service").read()).substitute({
+                     "description":
+                     f"kshift service for theme {name}",
+                     "command":
+                     f"{kshift_path} theme{service_theme}",
+                 })
+        if not service_path.exists() or service_path.read_text(
+        ) != service_content:
+            service_path.write_text(service_content)
+            units_changed = True
 
     # write startup timer & service
     startup_timer = c.systemd_loc / "kshift-startup.timer"
@@ -202,6 +250,9 @@ def write_systemd():
         }
         write_service(startup_service, subs)
 
+    if units_changed or written_timers:
+        system("systemctl --user daemon-reload")
+
     if len(written_timers) > 0:
         log_timer_write(written_timers)
 
@@ -209,7 +260,6 @@ def write_systemd():
         for t in written_timers:
             timers_str += f"kshift-{t}.timer "
 
-        system("systemctl --user daemon-reload")
         system(f"systemctl --user enable { timers_str }")
         system(f"systemctl --user start { timers_str }")
 
@@ -390,6 +440,20 @@ def theme(theme, colorscheme, cursortheme, desktop_theme, icontheme,
         "systemctl --user is-enabled kshift-startup.timer".split(),
         stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
+    # Older installed units pass their fixed theme as an argument. When that
+    # theme uses daily HH:MM or solar schedules, re-evaluate the current state
+    # so simultaneous Persistent timers cannot apply stale arguments in turn.
+    last_log_theme = None
+    automatic_schedule = all(
+        not conf.time or all(isinstance(t, datetime) for t in conf.time)
+        for conf in c.themes.values())
+    if (theme and getenv("SOURCE") == "systemd" and theme in c.themes
+            and c.themes[theme].time and automatic_schedule):
+        # Older installed units pass a fixed theme argument. Re-evaluate it
+        # when every timed theme uses daily datetime events, which this selector
+        # can compare reliably across a Persistent timer catch-up.
+        theme = None
+
     if theme:
         if theme in c.themes:
             print(f"Applying theme {theme}...")
@@ -415,26 +479,12 @@ def theme(theme, colorscheme, cursortheme, desktop_theme, icontheme,
     # Determine which theme should be active, then shift to it
     if not any([theme, colorscheme, icontheme, wallpaper, desktop_theme]):
 
-        themes = []
-
-        # Add each theme with simple timer, ie not strict OnCalendar time
-        for name, conf in c.themes.items():
-            for t in conf.time:
-                if isinstance(t, datetime) and datetime.now() >= t:
-                    themes.append((name, t))
-
-        # The last theme activated by timer could be correct active theme
-        # Find this last time only if kshift is enabled in systemd
-        if kshift_status == "enabled":
+        if kshift_status == "enabled" and last_log_theme is None:
             last_log_theme = parse_theme_logs(log_file)
-            if last_log_theme:
-                themes.append(last_log_theme)
 
-        # Sort themes such that the one closest to present is last
-        # Then change to this theme
-        themes = sorted(themes, key=lambda x: x[1])
-        if themes:
-            curr_theme = themes[-1][0]
+        curr_theme = _select_current_theme(c.themes,
+                                           last_log_theme=last_log_theme)
+        if curr_theme:
             print(f"Applying theme {curr_theme}...")
 
             c.themes[curr_theme].kshift()
