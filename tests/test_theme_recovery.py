@@ -1,34 +1,9 @@
-import importlib
 import json
 import subprocess
 from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
-
-
-@pytest.fixture
-def main_module(mocker):
-
-    def run(command, **kwargs):
-        if isinstance(command, str):
-            command = command.split()
-        if command[0] == "plasma-apply-colorscheme":
-            return subprocess.CompletedProcess(
-                command, 0, "  * BreezeLight\n  * BreezeDark\n")
-        return subprocess.CompletedProcess(command, 0, "")
-
-    from kshift.theme import Colorscheme
-
-    mocker.patch.object(Colorscheme, "available", [])
-    mocker.patch.object(Colorscheme, "current", None)
-    mocker.patch.object(Colorscheme,
-                        "fetch_colorschemes",
-                        return_value=(["BreezeLight",
-                                       "BreezeDark"], "BreezeDark"))
-    mocker.patch("subprocess.run", side_effect=run)
-    mocker.patch("requests.get", side_effect=ConnectionError("offline"))
-    return importlib.import_module("kshift.main")
 
 
 def _themes(sunrise, sunset):

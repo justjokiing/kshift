@@ -3,5 +3,6 @@ colorama
 pydantic
 pytest
 pytest-mock
+pytest-timeout
 PyYAML
 Requests
