@@ -128,6 +128,19 @@ def _select_current_theme(themes, reference_time=None, last_log_theme=None):
     return max(candidates)[2]
 
 
+def _daily_schedules(themes):
+    """True when every timed theme uses a daily datetime schedule.
+
+    The catch-up selector compares wall-clock minutes, which only works for
+    datetime events (HH:MM or solar). Calendar expressions (weekly, monthdays,
+    ...) cannot be compared that way, so those configs keep the named systemd
+    activations instead.
+    """
+    return all(
+        not conf.time or all(isinstance(t, datetime) for t in conf.time)
+        for conf in themes.values())
+
+
 ###################################
 # systemd
 ###################################
@@ -156,9 +169,7 @@ def write_systemd():
     written_timers = []
     units_changed = False
     removed_timer = False
-    automatic_schedule = all(
-        not conf.time or all(isinstance(t, datetime) for t in conf.time)
-        for conf in c.themes.values())
+    automatic_schedule = _daily_schedules(c.themes)
 
     # Remove any old timers
     for name, conf in c.themes.items():
@@ -446,9 +457,7 @@ def theme(theme, colorscheme, cursortheme, desktop_theme, icontheme,
     # theme uses daily HH:MM or solar schedules, re-evaluate the current state
     # so simultaneous Persistent timers cannot apply stale arguments in turn.
     last_log_theme = None
-    automatic_schedule = all(
-        not conf.time or all(isinstance(t, datetime) for t in conf.time)
-        for conf in c.themes.values())
+    automatic_schedule = _daily_schedules(c.themes)
     if (theme and getenv("SOURCE") == "systemd" and theme in c.themes
             and c.themes[theme].time and automatic_schedule):
         # Older installed units pass a fixed theme argument. Re-evaluate it
@@ -481,7 +490,7 @@ def theme(theme, colorscheme, cursortheme, desktop_theme, icontheme,
     # Determine which theme should be active, then shift to it
     if not any([theme, colorscheme, icontheme, wallpaper, desktop_theme]):
 
-        if kshift_status == "enabled" and last_log_theme is None:
+        if kshift_status == "enabled":
             last_log_theme = parse_theme_logs(log_file)
 
         curr_theme = _select_current_theme(c.themes,
