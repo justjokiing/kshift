@@ -155,6 +155,7 @@ def write_systemd():
     kshift_path = which("kshift") or "kshift"
     written_timers = []
     units_changed = False
+    removed_timer = False
     automatic_schedule = all(
         not conf.time or all(isinstance(t, datetime) for t in conf.time)
         for conf in c.themes.values())
@@ -164,6 +165,7 @@ def write_systemd():
         timer = c.systemd_loc / f"kshift-{name}.timer"
         if not conf.time and timer.exists():
             timer.unlink()
+            removed_timer = True
 
     # Write services for each theme
     # Write timer if they have 'time' option
@@ -250,7 +252,7 @@ def write_systemd():
         }
         write_service(startup_service, subs)
 
-    if units_changed or written_timers:
+    if units_changed or written_timers or removed_timer:
         system("systemctl --user daemon-reload")
 
     if len(written_timers) > 0:

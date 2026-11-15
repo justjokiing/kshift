@@ -207,3 +207,45 @@ def test_legacy_mixed_calendar_theme_keeps_named_activation(
 
     assert result.exit_code == 0
     assert applied == ["night"]
+
+
+def test_removed_timer_triggers_daemon_reload(main_module, tmp_path,
+                                              monkeypatch):
+    # Deleting a timer unit file does not unload it from systemd. Removing a
+    # schedule must reload the daemon or the stale timer keeps firing.
+    systemd_dir = tmp_path / "systemd"
+    template_dir = tmp_path / "templates"
+    systemd_dir.mkdir()
+    template_dir.mkdir()
+    for template in ("template.service", "template.timer"):
+        source = main_module.files("kshift") / "templates" / template
+        (template_dir / template).write_text(source.read_text())
+
+    # Calendar expressions keep the named service text unchanged, so removing
+    # one schedule only changes the set of timer units.
+    themes = {
+        "day": SimpleNamespace(time=["Mon..Fri *-*-* 08:00:00"]),
+        "night": SimpleNamespace(time=["Mon..Fri *-*-* 20:00:00"]),
+    }
+    monkeypatch.setattr(
+        main_module, "c",
+        SimpleNamespace(themes=themes,
+                        systemd_loc=systemd_dir,
+                        config_loc_base=tmp_path))
+    monkeypatch.setattr(main_module, "which", lambda _: "/usr/bin/kshift")
+    calls = []
+    monkeypatch.setattr(main_module, "system", calls.append)
+
+    main_module.write_systemd()
+    assert (systemd_dir / "kshift-day.timer").exists()
+    calls.clear()
+
+    themes["day"].time = []
+    main_module.write_systemd()
+    assert not (systemd_dir / "kshift-day.timer").exists()
+    assert "systemctl --user daemon-reload" in calls
+
+    # A no-op re-run must not reload the daemon again.
+    calls.clear()
+    main_module.write_systemd()
+    assert calls == []
