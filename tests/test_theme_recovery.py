@@ -38,6 +38,16 @@ def _themes(sunrise, sunset):
     }
 
 
+def _theme_log_line(theme, when, separator=" "):
+    """Build a line shaped like kshift's logging handler output."""
+    payload = json.dumps({
+        "event": "theme_change",
+        "theme": theme,
+        "source": "systemd"
+    })
+    return f"{when:%Y-%m-%d %H:%M:%S}{separator}- INFO - {payload}\n"
+
+
 def test_caught_up_day_and_night_timers_converge_to_current_theme(
         main_module, tmp_path, monkeypatch):
     # Both persistent timers can run together after downtime. Each service must
@@ -45,9 +55,6 @@ def test_caught_up_day_and_night_timers_converge_to_current_theme(
     themes = _themes(datetime(2026, 11, 5, 6, 42, 0),
                      datetime(2026, 11, 5, 16, 26, 4))
     now = datetime(2026, 11, 5, 18, 22, 51)
-
-    assert main_module._select_current_theme(themes, now) == "night"
-    assert main_module._select_current_theme(themes, now) == "night"
 
     systemd_dir = tmp_path / "systemd"
     template_dir = tmp_path / "templates"
@@ -64,6 +71,21 @@ def test_caught_up_day_and_night_timers_converge_to_current_theme(
     monkeypatch.setattr(main_module, "c", config)
     monkeypatch.setattr(main_module, "which", lambda _: "/usr/bin/kshift")
     monkeypatch.setattr(main_module, "system", lambda _: 0)
+
+    # First service run, followed by the log entry it writes.
+    first = main_module._select_current_theme(themes, now)
+    assert first == "night"
+
+    log_file = tmp_path / "kshift.log"
+    log_file.write_text(_theme_log_line(first, now))
+
+    # The second service must reach the same decision despite that entry.
+    second = main_module._select_current_theme(
+        themes,
+        now.replace(second=53),
+        last_log_theme=main_module.parse_theme_logs(log_file))
+    assert second == first
+
     main_module.write_systemd()
     for name in ("day", "night"):
         service = (systemd_dir / f"kshift-{name}.service").read_text()
@@ -96,22 +118,20 @@ def test_oncalendar_minute_boundary_matches_solar_time_with_seconds(
                                                       0)) == "night"
 
 
+@pytest.mark.parametrize("separator", [" ", "  ", "\t"])
 def test_parse_theme_logs_strips_timestamp_whitespace(tmp_path, monkeypatch,
-                                                      main_module):
+                                                      main_module, separator):
     monkeypatch.setattr(main_module, "c",
                         SimpleNamespace(themes={"night": object()}))
+    when = datetime(2026, 11, 5, 18, 22, 57)
     log_file = tmp_path / "kshift.log"
-    log_file.write_text("2026-11-05 18:22:57  - INFO - " +
-                        json.dumps({
-                            "event": "theme_change",
-                            "theme": "night",
-                            "source": "systemd"
-                        }) + "\n")
 
-    assert main_module.parse_theme_logs(log_file) == ("night",
-                                                      datetime(
-                                                          2026, 11, 5, 18, 22,
-                                                          57))
+    # The handler leaves one trailing space before " - INFO - "; older
+    # datetime.fromisoformat rejected that line, so only the stripped
+    # timestamp parses.
+    log_file.write_text(_theme_log_line("night", when, separator))
+
+    assert main_module.parse_theme_logs(log_file) == ("night", when)
 
 
 def test_calendar_expression_services_keep_named_theme(main_module, tmp_path,
@@ -175,6 +195,54 @@ def test_legacy_systemd_theme_argument_is_rechecked(main_module, monkeypatch):
 
     assert result.exit_code == 0
     assert applied == ["night"]
+
+
+def test_legacy_systemd_activation_rewrites_service_without_name(
+        main_module, tmp_path, monkeypatch):
+    # The recheck only migrates installed units if the next activation also
+    # rewrites the legacy service. Verify the upgrade path end to end.
+    systemd_dir = tmp_path / "systemd"
+    template_dir = tmp_path / "templates"
+    systemd_dir.mkdir()
+    template_dir.mkdir()
+    for template in ("template.service", "template.timer"):
+        source = main_module.files("kshift") / "templates" / template
+        (template_dir / template).write_text(source.read_text())
+
+    themes = {
+        "day":
+        SimpleNamespace(time=[datetime(2026, 11, 5, 6, 42)],
+                        kshift=lambda: None),
+        "night":
+        SimpleNamespace(time=[datetime(2026, 11, 5, 16, 26, 4)],
+                        kshift=lambda: None),
+    }
+    legacy_service = systemd_dir / "kshift-day.service"
+    legacy_service.write_text(
+        "[Service]\nExecStart=/usr/bin/kshift theme day\n")
+
+    monkeypatch.setattr(
+        main_module, "c",
+        SimpleNamespace(themes=themes,
+                        systemd_loc=systemd_dir,
+                        config_loc_base=tmp_path))
+    monkeypatch.setattr(main_module, "which", lambda _: "/usr/bin/kshift")
+    monkeypatch.setattr(main_module, "system", lambda _: 0)
+    monkeypatch.setattr(main_module,
+                        "getenv",
+                        lambda key, default=None: "systemd"
+                        if key == "SOURCE" else default)
+    monkeypatch.setattr(
+        main_module.subprocess, "run", lambda *args, **kwargs: subprocess.
+        CompletedProcess(args[0], 0, stdout=b"enabled"))
+    monkeypatch.setattr(main_module, "parse_theme_logs", lambda *args: None)
+
+    from click.testing import CliRunner
+
+    result = CliRunner().invoke(main_module.cli, ["theme", "day"])
+
+    assert result.exit_code == 0
+    assert "ExecStart=/usr/bin/kshift theme\n" in legacy_service.read_text()
 
 
 def test_legacy_mixed_calendar_theme_keeps_named_activation(
