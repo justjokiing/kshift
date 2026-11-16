@@ -71,3 +71,9 @@ kshift = "kshift.main:cli"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+addopts = "--strict-markers"
+markers = [
+    "integration: needs a private systemd --user manager (set KSHIFT_RUN_INTEGRATION=1)",
+    "plasma: applies and restores a theme on the live Plasma session (set KSHIFT_RUN_PLASMA=1)",
+    "network: calls a live external service (set KSHIFT_RUN_NETWORK=1)",
+]

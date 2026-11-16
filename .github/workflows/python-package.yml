@@ -5,9 +5,12 @@ name: Python package
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "develop" ]
+  schedule:
+    # Nightly private-systemd run; hosted runners may not support a user manager.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,13 +24,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python -m pip install flake8 pytest-timeout
+        python -m pip install -e .
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
@@ -37,4 +41,36 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest -s
+        pytest -q -m "not integration and not plasma" --timeout=180
+
+  # Formatting is enforced by .github/workflows/yapf_check.yml, so this matrix
+  # does not run yapf a second (and third) time.
+
+  systemd-integration:
+
+    # Hosted runners cannot start a private `systemd --user`, so this tier only
+    # runs where a runner is explicitly configured. Set the repository variable
+    # KSHIFT_SYSTEMD_RUNNER to a self-hosted runner label (see
+    # tests/integration/README.md); until then the job is reported as skipped
+    # rather than green-without-testing.
+    if: >-
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+      vars.KSHIFT_SYSTEMD_RUNNER != ''
+    runs-on: ${{ vars.KSHIFT_SYSTEMD_RUNNER }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -e . -r requirements.txt
+    - name: Run private-systemd harness
+      env:
+        KSHIFT_RUN_INTEGRATION: "1"
+        KSHIFT_REQUIRE_INTEGRATION: "1"
+      run: |
+        pytest tests/integration/test_private_systemd.py -v -rs --timeout=300
